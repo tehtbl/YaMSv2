@@ -1,0 +1,44 @@
+---
+General:
+  production: false
+  loglevel: debug
+
+  limit_threads_recv: 5
+  limit_threads_analysis: 5
+
+DataGetter:
+  exchanges:
+    - bittrex
+    - bitfinex
+
+Analysis:
+  plugins:
+    - 01_strat1
+    - 02_strat2
+
+
+
+telegram:
+  enabled: false
+  token: ''
+  chat_id: ''
+
+plugins:
+  ThirtyMin:
+
+  Day:
+    - 01_strat1
+
+schedulers:
+  - ThirtyMin
+  - Day
+
+bittrex:
+  enabled: true
+  short: 'btrx'
+  stake_currency_enabled: true
+  stake_currency: 'BTC'
+  min_price_usd: 0.003
+  max_price_usd: 1
+  blacklist:
+    - NONE
