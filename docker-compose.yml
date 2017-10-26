@@ -1,0 +1,57 @@
+version: "2.0"
+services:
+  db:
+    restart: always
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data/
+
+  app_receiver:
+    build: app_receiver/
+    restart: always
+    depends_on:
+      - db
+    links:
+      - db
+
+  app_analyze:
+    build: app_analyze/
+    depends_on:
+      - elasticsearch
+      - kibana
+    links:
+      - elasticsearch
+      - db
+    restart: always
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:5.5.0
+    volumes:
+      - ./docker/configs/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - ./es_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    restart: always
+    environment:
+      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:5.5.0
+    volumes:
+      - ./docker/configs/:/usr/share/kibana/config
+    ports:
+      - "5601:5601"
+    links:
+      - elasticsearch
+    restart: always
+
+#  redis:
+#    restart: always
+#    image: redis:latest
+#    ports:
+#      - "6379:6379"
+#    volumes:
+#      - redisdata:/data

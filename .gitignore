@@ -107,3 +107,6 @@ config.yml
 
 .DS_Store
 
+es_data/
+pgdata/
+
