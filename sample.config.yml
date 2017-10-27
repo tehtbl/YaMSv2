@@ -6,39 +6,37 @@ General:
   limit_threads_recv: 5
   limit_threads_analysis: 5
 
-DataGetter:
+DataTracker:
   exchanges:
     - bittrex
     - bitfinex
 
 Analysis:
   plugins:
+    - 00_cci14
     - 01_strat1
     - 02_strat2
 
+#
+# disabled, use filters in kibana
+#
 
-
-telegram:
-  enabled: false
-  token: ''
-  chat_id: ''
-
-plugins:
-  ThirtyMin:
-
-  Day:
-    - 01_strat1
-
-schedulers:
-  - ThirtyMin
-  - Day
-
-bittrex:
-  enabled: true
-  short: 'btrx'
-  stake_currency_enabled: true
-  stake_currency: 'BTC'
-  min_price_usd: 0.003
-  max_price_usd: 1
-  blacklist:
-    - NONE
+#bittrex:
+#  enabled: true
+#  short: 'btrx'
+#  stake_currency_enabled: true
+#  stake_currency: 'BTC'
+#  min_price_usd: 0.003
+#  max_price_usd: 1
+#  blacklist:
+#    - XVG
+#
+#bifinex:
+#  enabled: true
+#  short: 'btfi'
+#  stake_currency_enabled: true
+#  stake_currency: 'USD'
+#  min_price_usd: 0.003
+#  max_price_usd: 1
+#  blacklist:
+#    - NEO

@@ -1,0 +1,3 @@
+# LibYaMS
+
+lib for YaMS

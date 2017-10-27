@@ -109,4 +109,5 @@ config.yml
 
 es_data/
 pgdata/
+data/
 

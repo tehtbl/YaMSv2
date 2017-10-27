@@ -1,4 +1,4 @@
-version: "2.0"
+version: "3"
 services:
   db:
     restart: always
@@ -6,47 +6,57 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./pgdata:/var/lib/postgresql/data/
+      - ./data/es:/var/lib/postgresql/data/
 
-  app_receiver:
-    build: app_receiver/
+  app_tracker:
+    build:
+      context: .
+      dockerfile: docker/app_tracker/Dockerfile
+    command: "/usr/local/bin/python /tracker/main.py"
     restart: always
     depends_on:
       - db
     links:
       - db
 
-  app_analyze:
-    build: app_analyze/
-    depends_on:
-      - elasticsearch
-      - kibana
-    links:
-      - elasticsearch
-      - db
-    restart: always
+#  app_analyze:
+#    build:
+#      context: .
+#      dockerfile: docker/app_analyze/Dockerfile
+#    depends_on:
+#      - elasticsearch
+#      - kibana
+#    links:
+#      - elasticsearch
+#      - db
+#    restart: always
+#
+#  elasticsearch:
+#    image: docker.elastic.co/elasticsearch/elasticsearch:5.5.0
+#    volumes:
+#      - ./docker/config-es/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+#      - ./data/es:/usr/share/elasticsearch/data
+#    ports:
+#      - "9200:9200"
+#      - "9300:9300"
+#    restart: always
+#    environment:
+#      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+#
+#  kibana:
+#    image: docker.elastic.co/kibana/kibana:5.5.0
+#    volumes:
+#      - ./docker/config-ki/:/usr/share/kibana/config
+#    ports:
+#      - "5601:5601"
+#    links:
+#      - elasticsearch
+#    restart: always
 
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:5.5.0
-    volumes:
-      - ./docker/configs/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
-      - ./es_data:/usr/share/elasticsearch/data
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-    restart: always
-    environment:
-      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
 
-  kibana:
-    image: docker.elastic.co/kibana/kibana:5.5.0
-    volumes:
-      - ./docker/configs/:/usr/share/kibana/config
-    ports:
-      - "5601:5601"
-    links:
-      - elasticsearch
-    restart: always
+
+
+
 
 #  redis:
 #    restart: always

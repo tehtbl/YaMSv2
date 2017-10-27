@@ -14,9 +14,17 @@ YaMS v2 is intended to pull data from exchanges (every 5m, 30m, 4h, 1d), adding 
 - docker
 
 # Usage
+* build and run
 ```
-$ cp sample.config.yml config.yml
-$ bash startup.sh
+cp sample.config.yml config.yml
+docker-compose up
+```
+
+* cleanup
+```
+docker-compose down
+for i in $(docker ps -a -q); do docker rm -f "${i}"; done
+for i in $(docker images -a -q); do docker rmi "${i}"; done
 ```
 
 # Contributing
