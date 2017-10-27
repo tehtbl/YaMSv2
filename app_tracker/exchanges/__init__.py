@@ -29,20 +29,26 @@ from bittrex import BittrexExchange
 from bitfinex import BitfinexExchange
 
 
-class Exchanges(enum.Enum):
-    BITTREX = BittrexExchange
-    BITFINEX = BitfinexExchange
+# class Exchanges(enum.Enum):
+#     BITTREX = BittrexExchange
+#     BITFINEX = BitfinexExchange
+
+Exchanges = {
+    'BITTREX': BittrexExchange,
+    'BITFINEX': BitfinexExchange,
+}
 
 
+#
+#
+#
 def get_exchange_obj(str):
 
     if str in CONFIG["DataTracker"]["exchanges"]:
         try:
-            exchange_class = Exchanges[str.upper()].value
+            return Exchanges[str.upper()](CONFIG)
         except KeyError:
             raise RuntimeError('Exchange {} is not supported'.format(str))
-
-        EXCHANGE = exchange_class(exchange_config)
 
     return None
 

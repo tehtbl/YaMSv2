@@ -13,7 +13,7 @@ services:
       context: .
       dockerfile: docker/app_tracker/Dockerfile
     command: "/usr/local/bin/python /tracker/main.py"
-    restart: always
+#    restart: always
     depends_on:
       - db
     links:

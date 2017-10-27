@@ -68,6 +68,8 @@ def recv_data(exchg, tick):
 
     ex = get_exchange_obj(exchg)
 
+    print ex
+
     logger.info("getting related currencies from market summary")
     for cur in ex.get_related_markets():
         pair = cur['Summary']['MarketName']
@@ -108,6 +110,8 @@ if __name__ == "__main__":
 
     if not CONFIG["General"]["production"]:
         logger.info(">>> DEVELOPMENT MODE, NO SCHEDULING <<<")
+        recv_data('bittrex', '5m')
+        os._exit(0)
 
     if not len(CONFIG["DataTracker"]["exchanges"]) > 0:
         logger.info(">>> no exchanges defined, exiting... <<<")
