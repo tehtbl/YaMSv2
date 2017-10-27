@@ -1,12 +1,12 @@
 version: "3"
 services:
-  db:
-    restart: always
-    image: postgres:latest
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./data/es:/var/lib/postgresql/data/
+#  db:
+#    restart: always
+#    image: postgres:latest
+#    ports:
+#      - "5432:5432"
+#    volumes:
+#      - ./data/es:/var/lib/postgresql/data/
 
   app_tracker:
     build:
@@ -14,10 +14,12 @@ services:
       dockerfile: docker/app_tracker/Dockerfile
     command: "/usr/local/bin/python /tracker/main.py"
 #    restart: always
-    depends_on:
-      - db
-    links:
-      - db
+#    depends_on:
+#      - db
+#    links:
+#      - db
+
+
 
 #  app_analyze:
 #    build:

@@ -21,10 +21,13 @@ import requests as req
 from abstract_exchange import AbstractExchange
 
 
-class BitfinexExchange(AbstractExchange):
+class Bitfinex(AbstractExchange):
 
     def __init__(self, cfg):
-        super(BitfinexExchange, self).__init__(cfg)
+        super(Bitfinex, self).__init__(cfg)
 
     def get_ticker_data(self, pair, tick):
+        return []
+
+    def get_markets(self):
         return []

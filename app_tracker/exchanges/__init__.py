@@ -16,26 +16,19 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import enum
 import logging
 
 from libyams.utils import get_conf
+from bittrex import Bittrex
+from bitfinex import Bitfinex
 
 logger = logging.getLogger(__name__)
 
 CONFIG = get_conf()
 
-from bittrex import BittrexExchange
-from bitfinex import BitfinexExchange
-
-
-# class Exchanges(enum.Enum):
-#     BITTREX = BittrexExchange
-#     BITFINEX = BitfinexExchange
-
 Exchanges = {
-    'BITTREX': BittrexExchange,
-    'BITFINEX': BitfinexExchange,
+    'BITTREX': Bittrex,
+    'BITFINEX': Bitfinex,
 }
 
 
@@ -51,4 +44,3 @@ def get_exchange_obj(str):
             raise RuntimeError('Exchange {} is not supported'.format(str))
 
     return None
-

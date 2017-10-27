@@ -21,18 +21,15 @@ import requests as req
 from abstract_exchange import AbstractExchange
 
 
-class BittrexExchange(AbstractExchange):
+class Bittrex(AbstractExchange):
 
     def __init__(self, cfg):
-        super(BittrexExchange, self).__init__(cfg)
-
-    def get_ticker_data(self, pair, tick):
-        return []
+        super(Bittrex, self).__init__(cfg)
 
     #
     #
     #
-    def get_market_summary(self):
+    def get_markets(self):
         url = "https://bittrex.com/api/v2.0/pub/Markets/GetMarketSummaries"
         r = req.get(url, headers={
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
@@ -40,43 +37,28 @@ class BittrexExchange(AbstractExchange):
         data = r.json()
         if not data["success"]:
             raise RuntimeError("BITTREX: {}".format(data["message"]))
+
         return data['result']
 
     #
+    # get data from BITTREX ticker
     #
-    #
-    def get_related_currencies(self):
-        rel_curr = []
-        btc_usd_price = get_btc_usd()
+    def get_ticker_data(self, pair, tick):
 
-        # filter out related currencies
-        for c in get_market_summary():
-            if c['Market']['MarketName'] not in CONFIG["bittrex"]["blacklist"]:
-                val = c['Summary']['Last'] * btc_usd_price
-                if CONFIG["bittrex"]["min_price_usd"] < val < CONFIG["bittrex"]["max_price_usd"]:
-                    if CONFIG["bittrex"]["stake_currency_enabled"]:
-                        if c['Market']['BaseCurrency'] == CONFIG["bittrex"]["stake_currency"]:
-                            rel_curr.append(c)
-                    else:
-                        rel_curr.append(c)
+        tick_dict = {
+            '5m': 'fivemin',
+            '30m': 'thirtymin',
+            '1h': 'hour', # we hav no 4h on bittrex o_O
+            '1d': 'daily'
+        }
 
-        # save index
-        with open(os.path.join("/data", "__INDEX__.json"), 'w') as outfile:
-            json.dump([c['Market']['MarketName'] for c in rel_curr], outfile, indent=2)
-            outfile.close()
+        if tick not in tick_dict.keys():
+            raise RuntimeError('unknown tick %s' % (tick))
 
-        return rel_curr
-
-
-
-    #
-    # get data from BITTREX ticker, possible tick values are: onemin, thirtymin, hour, daily, weekly
-    #
-    def btrx_get_ticker(self, pair, tick='daily'):
         url = 'https://bittrex.com/Api/v2.0/pub/market/GetTicks'
         params = {
             'marketName': pair,
-            'tickInterval': tick,
+            'tickInterval': tick_dict[tick],
         }
 
         r = req.get(url, params=params, headers={
@@ -88,7 +70,6 @@ class BittrexExchange(AbstractExchange):
             raise RuntimeError('BITTREX: {}'.format(data['message']))
 
         return data['result']
-
 
     # #
     # # update labels

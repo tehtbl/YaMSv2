@@ -32,6 +32,7 @@ logging.getLogger('urllib3.connectionpool').setLevel(logging.INFO)
 tickers = {
      '5m': 5,
     '30m': 30,
+     '1h': 60,
      '4h': 60*4,
      '1d': 60*24
 }

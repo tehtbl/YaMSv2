@@ -17,19 +17,14 @@
 #
 
 import os
-import sys
 import time
-import json
 import logging
 import threading
 
 from pytz import utc
-from operator import itemgetter
-
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from libyams.utils import get_conf, tickers, get_btc_usd
-
+from libyams.utils import get_conf
 from exchanges import get_exchange_obj
 
 import pprint
@@ -45,18 +40,20 @@ CONFIG = get_conf()
 #
 #
 class SaveTickerData(threading.Thread):
-    def __init__(self, pair, tick):
+    def __init__(self, ex, pair, tick):
         threading.Thread.__init__(self)
+        self.exchg = ex
         self.pair = pair
         self.tick = tick
 
     def run(self):
         # TODO: check for exceptions
-        logger.info("processing %s at %s" % (self.pair, self.tick))
+        logger.info("processing %s at %s on %s" % (self.pair, self.exchg.name, self.tick))
 
-        time.sleep(3)
+        data = self.exchg.get_ticker_data(self.pair, self.tick)
+        # logger.debug(data)
 
-        logger.info("finished processing %s at %s" % (self.pair, self.tick))
+        logger.info("finished processing %s at %s on %s" % (self.pair, self.exchg.name, self.tick))
         time.sleep(.5)
 
 
@@ -68,10 +65,12 @@ def recv_data(exchg, tick):
 
     ex = get_exchange_obj(exchg)
 
-    print ex
+    if not ex:
+        logger.debug("got no exchange object, exiting")
+        return False
 
     logger.info("getting related currencies from market summary")
-    for cur in ex.get_related_markets():
+    for cur in ex.get_markets():
         pair = cur['Summary']['MarketName']
 
         # TODO: check for thread timeout
@@ -80,7 +79,7 @@ def recv_data(exchg, tick):
                 x.join()
                 thrds.remove(x)
 
-        t = SaveTickerData(pair, tick)
+        t = SaveTickerData(ex, pair, tick)
         thrds.append(t)
         t.start()
 
@@ -111,7 +110,9 @@ if __name__ == "__main__":
     if not CONFIG["General"]["production"]:
         logger.info(">>> DEVELOPMENT MODE, NO SCHEDULING <<<")
         recv_data('bittrex', '5m')
-        os._exit(0)
+        import sys
+        sys.exit(0)
+        # os._exit(0)
 
     if not len(CONFIG["DataTracker"]["exchanges"]) > 0:
         logger.info(">>> no exchanges defined, exiting... <<<")

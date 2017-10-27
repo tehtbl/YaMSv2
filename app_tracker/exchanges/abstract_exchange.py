@@ -35,6 +35,13 @@ class AbstractExchange(object):
         return self.__class__.__name__
 
     @abstractmethod
+    def get_markets(self):
+        """
+
+        :return: returns all possible markets
+        """
+
+    @abstractmethod
     def get_ticker_data(self, pair, tick):
         """
         returns all ticker data for a given pair and interval

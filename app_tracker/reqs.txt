@@ -1,5 +1,4 @@
 requests==2.18.4
-enum==0.4.6
 wrapt==1.10.11
 arrow==0.10.0
 PyYAML==3.11
