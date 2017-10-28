@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 logging.getLogger('requests.packages.urllib3').setLevel(logging.INFO)
 logging.getLogger('urllib3.connectionpool').setLevel(logging.INFO)
 
-tickers = {
+ticks = {
      '5m': 5,
     '30m': 30,
      '1h': 60,

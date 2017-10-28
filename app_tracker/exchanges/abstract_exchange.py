@@ -24,6 +24,7 @@ class AbstractExchange(object):
 
     def __init__(self, config):
         self.config = config
+        self.tick_dict = {}
 
     @property
     def name(self):

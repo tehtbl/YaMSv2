@@ -28,7 +28,7 @@ from django.conf import settings
 from django.core.management import execute_from_command_line
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from libyams.utils import get_conf
+from libyams.utils import get_conf, ticks
 from exchanges import get_exchange_obj
 
 import pprint
@@ -40,22 +40,7 @@ logger = logging.getLogger(__name__)
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 CONFIG = get_conf()
-
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# import libyams
-# BASE_DIR = "%s" % libyams.__path__
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'playground',
-#         'USER': 'admin',
-#         'PASSWORD': 'pasw',
-#         'HOST': 'localhost',
-#     }
-# }
 
 settings.configure(
     INSTALLED_APPS=[
@@ -92,8 +77,10 @@ class SaveTickerData(threading.Thread):
         # TODO: check for exceptions
         logger.info("processing %s at %s on %s" % (self.pair, self.exchg.name, self.tick))
 
+
+
         data = self.exchg.get_ticker_data(self.pair, self.tick)
-        # logger.debug(data)
+        logger.debug(data)
 
         # >>> import libyams.django_manage
         # >>> from libyams.orm.models import Settings
@@ -154,29 +141,28 @@ if __name__ == "__main__":
     logger.info("waiting for db to finish starting")
     time.sleep(30)
 
-    execute_from_command_line([sys.argv[0], 'makemigrations'])
-    execute_from_command_line([sys.argv[0], 'migrate'])
-    django.setup()
-
     # set log level
     logger.setLevel(logging.INFO)
     if CONFIG['General']['loglevel'] == 'debug':
         logger.setLevel(logging.DEBUG)
 
-    # if CONFIG['telegram']['enabled']:
-    #     TelegramHandler.listen()
-    #     TelegramHandler.send_msg('*Status:* `scanner started`')
+    # check for exchanges
+    if not len(CONFIG["DataTracker"]["exchanges"]) > 0:
+        logger.info(">>> no exchanges defined, exiting... <<<")
+        os._exit(0)
 
+    # bootstrap ORM
+    execute_from_command_line([sys.argv[0], 'makemigrations'])
+    execute_from_command_line([sys.argv[0], 'migrate'])
+    django.setup()
+
+    # development mode
     if not CONFIG["General"]["production"]:
         logger.info(">>> DEVELOPMENT MODE, NO SCHEDULING <<<")
         recv_data('bittrex', '5m')
         import sys
         sys.exit(0)
         # os._exit(0)
-
-    if not len(CONFIG["DataTracker"]["exchanges"]) > 0:
-        logger.info(">>> no exchanges defined, exiting... <<<")
-        os._exit(0)
 
     # production mode: set scheduling of executing receiver methods
     if CONFIG["General"]["production"]:

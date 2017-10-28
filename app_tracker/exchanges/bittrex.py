@@ -23,11 +23,20 @@ from abstract_exchange import AbstractExchange
 
 class Bittrex(AbstractExchange):
 
+    #
+    # init
+    #
     def __init__(self, cfg):
         super(Bittrex, self).__init__(cfg)
+        self.tick_dict = {
+            '5m': 'fivemin',
+            '30m': 'thirtymin',
+            '1h': 'hour', # we hav no 4h on bittrex o_O
+            '1d': 'daily'
+        }
 
     #
-    #
+    # get available markets
     #
     def get_markets(self):
         url = "https://bittrex.com/api/v2.0/pub/Markets/GetMarketSummaries"
@@ -45,20 +54,13 @@ class Bittrex(AbstractExchange):
     #
     def get_ticker_data(self, pair, tick):
 
-        tick_dict = {
-            '5m': 'fivemin',
-            '30m': 'thirtymin',
-            '1h': 'hour', # we hav no 4h on bittrex o_O
-            '1d': 'daily'
-        }
-
-        if tick not in tick_dict.keys():
-            raise RuntimeError('unknown tick %s' % (tick))
+        if tick not in self.tick_dict.keys():
+            raise RuntimeError('unknown tick %s for bittrex' % (tick))
 
         url = 'https://bittrex.com/Api/v2.0/pub/market/GetTicks'
         params = {
             'marketName': pair,
-            'tickInterval': tick_dict[tick],
+            'tickInterval': self.tick_dict[tick],
         }
 
         r = req.get(url, params=params, headers={
