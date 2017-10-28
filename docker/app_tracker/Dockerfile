@@ -18,5 +18,8 @@ RUN mkdir -p /${WORK_APPDIR}
 WORKDIR /${WORK_APPDIR}
 
 COPY config.yml /tracker
+COPY docker/${LOCAL_APPDIR}/start.sh /${WORK_APPDIR}/start.sh
+RUN chmod +x /${WORK_APPDIR}/start.sh
+RUN touch /tmp/FIRST_START
 
 COPY ${LOCAL_APPDIR} /${WORK_APPDIR}

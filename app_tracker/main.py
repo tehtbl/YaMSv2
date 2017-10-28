@@ -24,8 +24,8 @@ import logging
 import threading
 
 from pytz import utc
-from django.conf import settings
-from django.core.management import execute_from_command_line
+# from django.conf import settings
+# from django.core.management import execute_from_command_line
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from libyams.utils import get_conf, ticks
@@ -40,27 +40,6 @@ logger = logging.getLogger(__name__)
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 CONFIG = get_conf()
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-settings.configure(
-    INSTALLED_APPS=[
-        'libyams.orm',
-    ],
-    DATABASES={
-        # 'default': {
-        #     'ENGINE': 'django.db.backends.sqlite3',
-        #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-        # }
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql_psycopg2',
-            'NAME': 'yamsdb',
-            'USER': 'pguser',
-            'PASSWORD': 'supersecret',
-            'HOST': 'db',
-            'PORT': 5432
-        }
-    },
-)
 
 
 #
@@ -154,8 +133,8 @@ def recv_data(exchg, tick):
 #
 if __name__ == "__main__":
 
-    logger.info("waiting for db to finish starting")
-    time.sleep(20)
+    # logger.info("waiting for db to finish starting")
+    # time.sleep(20)
 
     # set log level
     logger.setLevel(logging.INFO)
@@ -167,15 +146,15 @@ if __name__ == "__main__":
         logger.info(">>> no exchanges defined, exiting... <<<")
         os._exit(0)
 
-    # bootstrap ORM
-    execute_from_command_line([sys.argv[0], 'makemigrations'])
-    execute_from_command_line([sys.argv[0], 'migrate'])
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
     django.setup()
 
     # development mode
     if not CONFIG["General"]["production"]:
         logger.info(">>> DEVELOPMENT MODE, NO SCHEDULING <<<")
-        recv_data('bittrex', '5m')
+        recv_data('bittrex', '4h')
+        recv_data('bitfinex', '4h')
+        recv_data('bittrex', '30m')
         import sys
         sys.exit(0)
         # os._exit(0)

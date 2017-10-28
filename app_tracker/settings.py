@@ -16,18 +16,27 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import requests as req
+import os
 
-from abstract_exchange import AbstractExchange
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+INSTALLED_APPS = [
+    'libyams.orm'
+]
 
-class Bitfinex(AbstractExchange):
+DATABASES = {
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.sqlite3',
+    #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    # }
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'yamsdb',
+        'USER': 'pguser',
+        'PASSWORD': 'supersecret',
+        'HOST': 'db',
+        'PORT': 5432
+    }
+}
 
-    def __init__(self, cfg):
-        super(Bitfinex, self).__init__(cfg)
-
-    def get_markets(self):
-        return []
-
-    def get_ticker_data(self, pair, tick):
-        return []
+SECRET_KEY = 'NOT NEEDED...'

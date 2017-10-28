@@ -18,7 +18,7 @@ services:
     build:
       context: .
       dockerfile: docker/app_tracker/Dockerfile
-    command: "/usr/local/bin/python /tracker/main.py"
+    command: "/bin/bash /tracker/start.sh"
 #    restart: always
     depends_on:
       - db

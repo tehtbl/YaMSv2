@@ -16,18 +16,10 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import requests as req
+import os
+import sys
 
-from abstract_exchange import AbstractExchange
-
-
-class Bitfinex(AbstractExchange):
-
-    def __init__(self, cfg):
-        super(Bitfinex, self).__init__(cfg)
-
-    def get_markets(self):
-        return []
-
-    def get_ticker_data(self, pair, tick):
-        return []
+if __name__ == "__main__":
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
+    from django.core.management import execute_from_command_line
+    execute_from_command_line(sys.argv)
