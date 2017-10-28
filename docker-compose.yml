@@ -11,6 +11,8 @@ services:
       POSTGRES_USER: 'pguser'
       POSTGRES_PASSWORD: 'supersecret'
       POSTGRES_DB: 'yamsdb'
+    logging:
+      driver: "none"
 
   app_tracker:
     build:

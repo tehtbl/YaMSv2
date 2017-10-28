@@ -31,7 +31,7 @@ class Bittrex(AbstractExchange):
         self.tick_dict = {
             '5m': 'fivemin',
             '30m': 'thirtymin',
-            '1h': 'hour', # we hav no 4h on bittrex o_O
+            '1h': 'hour', # we have no 4h on bittrex o_O :(
             '1d': 'daily'
         }
 
@@ -47,7 +47,7 @@ class Bittrex(AbstractExchange):
         if not data["success"]:
             raise RuntimeError("BITTREX: {}".format(data["message"]))
 
-        return data['result']
+        return map(lambda x: x['Summary']['MarketName'], data['result'])
 
     #
     # get data from BITTREX ticker

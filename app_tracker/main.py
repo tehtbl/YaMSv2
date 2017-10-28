@@ -64,34 +64,49 @@ settings.configure(
 
 
 #
-#
+# thread for savind data to database
 #
 class SaveTickerData(threading.Thread):
-    def __init__(self, ex, pair, tick):
+    def __init__(self, ex, pair, tick, market):
         threading.Thread.__init__(self)
         self.exchg = ex
         self.pair = pair
         self.tick = tick
+        self.market = market
 
     def run(self):
-        # TODO: check for exceptions
         logger.info("processing %s at %s on %s" % (self.pair, self.exchg.name, self.tick))
 
+        if self.tick not in ticks.keys():
+            raise RuntimeError('unknown tick %s for bittrex' % self.tick)
 
+        from libyams.orm.models import TickerData
+        from django.db import IntegrityError
 
-        data = self.exchg.get_ticker_data(self.pair, self.tick)
-        logger.debug(data)
+        check = False
+        td_count_before = len(TickerData.objects.all())
 
-        # >>> import libyams.django_manage
-        # >>> from libyams.orm.models import Settings
-        # >>>
-        # >> > s = Settings.objects.create(base_currency='btc')
+        while not check:
+            data = self.exchg.get_ticker_data(self.pair, self.tick)
+            # logger.debug(data[:2])
 
-        from libyams.orm.models import Settings
-        s = Settings.objects.create(base_currency='btc')
-        s.save()
+            for d in data:
+                t = TickerData(market=self.market, tick_len=self.tick, time_val=d['T'],
+                               open=d['O'], high=d['H'], low=d['L'], close=d['C'])
+                try:
+                    t.save()
+                except IntegrityError:
+                    pass
 
-        logger.info("obj: " + str(Settings.objects.all()))
+            # check if we got new data, if not try again in 7 seconds
+            td_count_after = len(TickerData.objects.all())
+            if td_count_after > td_count_before:
+                check = True
+            else:
+                logger.debug(td_count_before)
+                logger.debug(td_count_after)
+                logger.info("AGAIN processing %s at %s on %s" % (self.pair, self.exchg.name, self.tick))
+                time.sleep(30)
 
         logger.info("finished processing %s at %s on %s" % (self.pair, self.exchg.name, self.tick))
         time.sleep(.5)
@@ -109,17 +124,18 @@ def recv_data(exchg, tick):
         logger.debug("got no exchange object, exiting")
         return False
 
-    logger.info("getting related currencies from market summary")
-    for cur in ex.get_markets():
-        pair = cur['Summary']['MarketName']
+    from libyams.orm.models import Market
 
-        # TODO: check for thread timeout
+    logger.info("getting related currencies from market summary")
+    for pair in ex.get_markets():
+        m, created = Market.objects.get_or_create(exchange=ex, pair=pair)
+
         if len(thrds) >= CONFIG["General"]["limit_threads_recv"]:
             for x in thrds:
                 x.join()
                 thrds.remove(x)
 
-        t = SaveTickerData(ex, pair, tick)
+        t = SaveTickerData(ex, pair, tick, m)
         thrds.append(t)
         t.start()
 
@@ -139,7 +155,7 @@ def recv_data(exchg, tick):
 if __name__ == "__main__":
 
     logger.info("waiting for db to finish starting")
-    time.sleep(30)
+    time.sleep(20)
 
     # set log level
     logger.setLevel(logging.INFO)
@@ -172,6 +188,11 @@ if __name__ == "__main__":
 
         # prepare scheduler
         for exchg in CONFIG["DataTracker"]["exchanges"]:
+
+            # start receiver methods for the first time to initialize data
+            for t in ticks:
+                recv_data(exchg, t)
+
             # wait some seconds until data is finished aggregating at bittrex-side
             scheduler.add_job(recv_data, args=(exchg, '5m'), trigger='cron', minute="*/5", second="7")
             scheduler.add_job(recv_data, args=(exchg, '30m'), trigger='cron', minute="*/30", second="13")
