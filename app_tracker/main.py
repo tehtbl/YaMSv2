@@ -110,9 +110,13 @@ def recv_data(exchg, tick):
         m, created = Market.objects.get_or_create(exchange=ex, pair=pair)
 
         if len(thrds) >= CONFIG["General"]["limit_threads_recv"]:
-            for x in thrds:
-                x.join()
-                thrds.remove(x)
+            t = thrds[0]
+            t.join()
+            thrds.remove(t)
+
+            # for x in thrds:
+            #     x.join()
+            #     thrds.remove(x)
 
         t = SaveTickerData(ex, pair, tick, m)
         thrds.append(t)
