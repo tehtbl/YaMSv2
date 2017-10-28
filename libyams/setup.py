@@ -16,17 +16,23 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import os
 from setuptools import setup, find_packages
+
+os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name='LibYaMS',
     version='0.2.0-dev',
-    packages=find_packages('libyams'),
+    # packages=find_packages(),
+    # packages=find_packages('libyams'),
+    packages=['libyams'],
     install_requires=[
         'python-telegram-bot==7.0.1',
         'requests==2.18.4',
         'wrapt==1.10.11',
         'PyYAML==3.11',
+        'Django==1.11.6'
     ],
     author='tbl42',
     author_email='3999809+tbl42@users.noreply.github.com',

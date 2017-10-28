@@ -7,12 +7,12 @@ ENV WORK_APPDIR tracker
 RUN apt-get update
 RUN apt-get -y install ntpdate
 
+ADD ${LOCAL_APPDIR}/reqs.txt /tmp/reqs.txt
+RUN pip install --no-cache-dir -r /tmp/reqs.txt
+
 RUN mkdir -p /libyams
 COPY libyams /libyams
 RUN pip install --no-cache-dir -e /libyams
-
-ADD ${LOCAL_APPDIR}/reqs.txt /tmp/reqs.txt
-RUN pip install --no-cache-dir -r /tmp/reqs.txt
 
 RUN mkdir -p /${WORK_APPDIR}
 WORKDIR /${WORK_APPDIR}

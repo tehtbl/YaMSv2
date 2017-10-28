@@ -18,10 +18,13 @@
 
 import os
 import time
+import django
 import logging
 import threading
 
 from pytz import utc
+from django.conf import settings
+from django.core.management import execute_from_command_line
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from libyams.utils import get_conf
@@ -33,8 +36,34 @@ pp = pprint.PrettyPrinter(indent=2)
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
+
 CONFIG = get_conf()
 
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'playground',
+#         'USER': 'admin',
+#         'PASSWORD': 'pasw',
+#         'HOST': 'localhost',
+#     }
+# }
+
+settings.configure(
+    INSTALLED_APPS=[
+        'libyams.orm',
+    ],
+    DATABASES={
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        }
+    },
+)
 
 #
 #
@@ -52,6 +81,12 @@ class SaveTickerData(threading.Thread):
 
         data = self.exchg.get_ticker_data(self.pair, self.tick)
         # logger.debug(data)
+
+        # >>> import libyams.django_manage
+        # >>> from libyams.orm.models import Settings
+        # >>>
+        # >> > s = Settings.objects.create(base_currency='btc')
+
 
         logger.info("finished processing %s at %s on %s" % (self.pair, self.exchg.name, self.tick))
         time.sleep(.5)
@@ -97,6 +132,20 @@ def recv_data(exchg, tick):
 # MAiN
 #
 if __name__ == "__main__":
+
+    logger.info("django setup")
+    print "setting up django"
+
+    django.setup()
+    execute_from_command_line(['makemigrations'])
+    execute_from_command_line(['migrate'])
+
+    from libyams.orm.models import Settings
+    s = Settings.objects.create(base_currency='btc')
+
+    logger.info(s)
+
+
 
     # set log level
     logger.setLevel(logging.INFO)
