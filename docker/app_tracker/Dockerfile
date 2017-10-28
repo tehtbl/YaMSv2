@@ -4,8 +4,8 @@ FROM python:2.7
 ENV LOCAL_APPDIR app_tracker
 ENV WORK_APPDIR tracker
 
-RUN apt-get update
-RUN apt-get -y install ntpdate
+# RUN apt-get update
+# RUN apt-get -y install ntpdate
 
 ADD ${LOCAL_APPDIR}/reqs.txt /tmp/reqs.txt
 RUN pip install --no-cache-dir -r /tmp/reqs.txt

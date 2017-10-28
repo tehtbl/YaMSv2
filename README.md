@@ -22,6 +22,7 @@ docker-compose down && docker-compose build && docker-compose up
 
 * cleanup
 ```
+docker run --rm -ti yamsv2_app_tracker /bin/bash
 docker-compose down
 for i in $(docker ps -a -q); do docker rm -f "${i}"; done
 for i in $(docker images -a -q); do docker rmi "${i}"; done

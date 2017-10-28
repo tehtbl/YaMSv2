@@ -109,7 +109,7 @@ class Settings(models.Model):
         verbose_name_plural = verbose_name
 
     def __str__(self):
-        return u'%s' % self.cur_name
+        return u'%s' % self.uuid
 
     def __unicode__(self):
         return self.__str__()

@@ -17,6 +17,7 @@
 #
 
 import os
+import sys
 import time
 import django
 import logging
@@ -43,6 +44,9 @@ CONFIG = get_conf()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# import libyams
+# BASE_DIR = "%s" % libyams.__path__
+
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.mysql',
@@ -64,6 +68,7 @@ settings.configure(
         }
     },
 )
+
 
 #
 #
@@ -87,6 +92,11 @@ class SaveTickerData(threading.Thread):
         # >>>
         # >> > s = Settings.objects.create(base_currency='btc')
 
+        from libyams.orm.models import Settings
+        s = Settings.objects.create(base_currency='btc')
+        s.save()
+
+        logger.info("obj: " + str(Settings.objects.all()))
 
         logger.info("finished processing %s at %s on %s" % (self.pair, self.exchg.name, self.tick))
         time.sleep(.5)
@@ -133,19 +143,9 @@ def recv_data(exchg, tick):
 #
 if __name__ == "__main__":
 
-    logger.info("django setup")
-    print "setting up django"
-
+    execute_from_command_line([sys.argv[0], 'makemigrations'])
+    execute_from_command_line([sys.argv[0], 'migrate'])
     django.setup()
-    execute_from_command_line(['makemigrations'])
-    execute_from_command_line(['migrate'])
-
-    from libyams.orm.models import Settings
-    s = Settings.objects.create(base_currency='btc')
-
-    logger.info(s)
-
-
 
     # set log level
     logger.setLevel(logging.INFO)
