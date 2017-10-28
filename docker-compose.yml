@@ -1,12 +1,16 @@
 version: "3"
 services:
-#  db:
-#    restart: always
-#    image: postgres:latest
-#    ports:
-#      - "5432:5432"
-#    volumes:
-#      - ./data/es:/var/lib/postgresql/data/
+  db:
+    restart: always
+    image: 'postgres:9.5.3'
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/pgdata:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_USER: 'pguser'
+      POSTGRES_PASSWORD: 'supersecret'
+      POSTGRES_DB: 'yamsdb'
 
   app_tracker:
     build:
@@ -14,10 +18,10 @@ services:
       dockerfile: docker/app_tracker/Dockerfile
     command: "/usr/local/bin/python /tracker/main.py"
 #    restart: always
-#    depends_on:
-#      - db
-#    links:
-#      - db
+    depends_on:
+      - db
+    links:
+      - db
 
 
 

@@ -62,9 +62,17 @@ settings.configure(
         'libyams.orm',
     ],
     DATABASES={
+        # 'default': {
+        #     'ENGINE': 'django.db.backends.sqlite3',
+        #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        # }
         'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'NAME': 'yamsdb',
+            'USER': 'pguser',
+            'PASSWORD': 'supersecret',
+            'HOST': 'db',
+            'PORT': 5432
         }
     },
 )
@@ -142,6 +150,9 @@ def recv_data(exchg, tick):
 # MAiN
 #
 if __name__ == "__main__":
+
+    logger.info("waiting for db to finish starting")
+    time.sleep(30)
 
     execute_from_command_line([sys.argv[0], 'makemigrations'])
     execute_from_command_line([sys.argv[0], 'migrate'])
