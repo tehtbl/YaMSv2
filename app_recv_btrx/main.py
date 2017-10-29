@@ -30,7 +30,6 @@ from libyams.utils import get_conf, ticks, get_btc_usd
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 CONFIG = get_conf()
 
 
@@ -59,7 +58,7 @@ def get_related_currencies():
 
     # filter out related currencies
     for c in get_markets():
-        if c['Market']['MarketName'] not in CONFIG["bittrex"]["blacklist"]:
+        if c['Market']['MarketCurrency'] not in CONFIG["bittrex"]["blacklist"]:
             val = c['Summary']['Last'] * btc_usd_price
             if CONFIG["bittrex"]["min_price_usd"] < val < CONFIG["bittrex"]["max_price_usd"]:
                 if CONFIG["bittrex"]["stake_currency_enabled"]:
@@ -92,19 +91,6 @@ def get_ticker_data(pair, tick):
     return data['result']
 
 
-# #
-# # update labels
-# #
-# def parse_ticker_dataframe(self, data):
-#     from pandas import DataFrame
-#
-#     df = DataFrame(data) \
-#         .drop('BV', 1) \
-#         .rename(columns={'C': 'close', 'V': 'volume', 'O': 'open', 'H': 'high', 'L': 'low', 'T': 'date'}) \
-#         .sort_values('date')
-#
-#     return df
-
 #
 # thread for saving data to database
 #
@@ -115,8 +101,6 @@ class SendTickerData(threading.Thread):
         self.tick = tick
         self.exchg = CONFIG["bittrex"]["short"]
 
-        # CONFIG["bittrex"]["tickers"][self.tick]
-
     def doit(self):
         logger.info("processing %s at %s on %s" % (self.pair, self.exchg, self.tick))
 
@@ -126,9 +110,9 @@ class SendTickerData(threading.Thread):
         data = get_ticker_data(self.pair, CONFIG["bittrex"]["tickers"][self.tick])
 
         to_insert = []
-        for d in data:
+        for d in data[:5]:
             to_insert.append({
-                'market': self.market,
+                'market': self.pair,
                 'tick_len': self.tick,
                 'time_val': d['T'],
                 'open': float(d['O']),
@@ -137,17 +121,20 @@ class SendTickerData(threading.Thread):
                 'close': float(d['C'])
             })
 
+        # TODO: check if new data is there
         # TODO: send data to socket for data controller
 
-        logger.info("finished processing %s at %s on %s" % (self.pair, self.exchg.name, self.tick))
+        # logger.debug(to_insert)
+        time.sleep(1)
+
+        logger.info("finished processing %s at %s on %s" % (self.pair, self.exchg, self.tick))
         time.sleep(.5)
 
     def run(self):
-        # >> > total_time = timeit.timeit('[v for v in range(10000)]', number=10000)
         t1 = time.time()
         self.doit()
         t2 = time.time()
-        logger.debug("TIME of processing %s at %s on %s was %s sec" % (self.pair, self.exchg.name, self.tick, str(t2-t1)))
+        logger.debug("TIME of processing %s at %s on %s was %s sec" % (self.pair, self.exchg, self.tick, str(t2-t1)))
 
 
 #
@@ -188,7 +175,7 @@ if __name__ == "__main__":
 
     # set log level
     logger.setLevel(logging.INFO)
-    if CONFIG['General']['loglevel'] == 'debug':
+    if CONFIG['general']['loglevel'] == 'debug':
         logger.setLevel(logging.DEBUG)
 
     # check for exchanges
@@ -218,10 +205,10 @@ if __name__ == "__main__":
             recv_data(t)
 
         # wait some seconds until data is finished aggregating at bittrex-side
-        scheduler.add_job(recv_data, args=('5m'), trigger='cron', minute="*/5", second="7")
-        scheduler.add_job(recv_data, args=('30m'), trigger='cron', minute="*/30", second="13")
-        scheduler.add_job(recv_data, args=('1h'), trigger='cron', hour="*/4", minute="2", second="7")
-        scheduler.add_job(recv_data, args=('1d'), trigger='cron', hour="0", minute="5", second="13")
+        scheduler.add_job(recv_data, args=['5m'], trigger='cron', minute="*/5", second="7")
+        scheduler.add_job(recv_data, args=['30m'], trigger='cron', minute="*/30", second="13")
+        scheduler.add_job(recv_data, args=['1h'], trigger='cron', hour="*/4", minute="2", second="21")
+        scheduler.add_job(recv_data, args=['1d'], trigger='cron', hour="0", minute="5", second="29")
 
         # start the scheduler
         scheduler.start()

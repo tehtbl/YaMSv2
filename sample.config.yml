@@ -2,8 +2,7 @@
 general:
   production: false
   loglevel: debug
-
-  limit_threads_recv: 10
+  limit_threads_recv: 5
   limit_threads_analysis: 5
 
 datatracker:
@@ -18,12 +17,12 @@ bittrex:
     5m: 'fivemin'
     30m: 'thirtymin'
     1h: 'hour' # we have no 4h on bittrex o_O :(
-    1d: 'daily'
+    1d: 'day'
   stake_currency_enabled: true
   stake_currency: 'BTC'
   min_price_usd: 0.003
   max_price_usd: 1
-blacklist:
+  blacklist:
     - XVG
   analysis:
     plugins:
