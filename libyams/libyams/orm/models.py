@@ -83,8 +83,8 @@ class TickerData(models.Model):
     low = models.PositiveIntegerField(default=0, verbose_name="low")
     close = models.PositiveIntegerField(default=0, verbose_name="close")
 
-    created = models.DateTimeField(auto_now_add=True)
-    last_updated = models.DateTimeField(auto_now=True)
+    # created = models.DateTimeField(auto_now_add=True)
+    # last_updated = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "TickerData"

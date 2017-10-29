@@ -34,6 +34,9 @@ from exchanges import get_exchange_obj
 import pprint
 pp = pprint.PrettyPrinter(indent=2)
 
+import timeit
+
+
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -43,7 +46,7 @@ CONFIG = get_conf()
 
 
 #
-# thread for savind data to database
+# thread for saving data to database
 #
 class SaveTickerData(threading.Thread):
     def __init__(self, ex, pair, tick, market):
@@ -53,7 +56,7 @@ class SaveTickerData(threading.Thread):
         self.tick = tick
         self.market = market
 
-    def run(self):
+    def doit(self):
         logger.info("processing %s at %s on %s" % (self.pair, self.exchg.name, self.tick))
 
         if self.tick not in ticks.keys():
@@ -63,32 +66,118 @@ class SaveTickerData(threading.Thread):
         from django.db import IntegrityError
 
         check = False
-        td_count_before = len(TickerData.objects.all())
+        counter = 0
 
-        while not check:
+        t1 = time.time()
+        td_count_before = len(TickerData.objects.all())
+        td_all = TickerData.objects.all()
+        t2 = time.time()
+        logger.debug("TIME (td_count_before) of processing %s at %s on %s was %s sec" % ( self.pair, self.exchg.name, self.tick, str(t2 - t1)))
+
+        while not check and counter < 3:
+            t1 = time.time()
             data = self.exchg.get_ticker_data(self.pair, self.tick)
             # logger.debug(data[:2])
+            t2 = time.time()
+            logger.debug("TIME (get data) of processing %s at %s on %s was %s sec" % (self.pair, self.exchg.name, self.tick, str(t2 - t1)))
 
+            t1 = time.time()
             for d in data:
                 t = TickerData(market=self.market, tick_len=self.tick, time_val=d['T'],
                                open=d['O'], high=d['H'], low=d['L'], close=d['C'])
-                try:
-                    t.save()
-                except IntegrityError:
-                    pass
+
+                if t not in td_all.iterator():
+                    try:
+                        t.save()
+                    except IntegrityError:
+                        pass
+                # t, created = TickerData.objects.get_or_create(market=self.market, tick_len=self.tick, time_val=d['T'], open=d['O'], high=d['H'], low=d['L'], close=d['C'])
+                # if created:
+                #     logger.debug("OBJ created while processing %s at %s on %s was %s sec" % (self.pair, self.exchg.name, self.tick, str(t2 - t1)))
+
+            t2 = time.time()
+            logger.debug("TIME (save data to db) of processing %s at %s on %s was %s sec" % (self.pair, self.exchg.name, self.tick, str(t2 - t1)))
 
             # check if we got new data, if not try again in 7 seconds
+            t1 = time.time()
             td_count_after = len(TickerData.objects.all())
+            t2 = time.time()
+            logger.debug("TIME (td_count_after) of processing %s at %s on %s was %s sec" % (self.pair, self.exchg.name, self.tick, str(t2 - t1)))
+
+            logger.debug(td_count_before)
+            logger.debug(td_count_after)
+
             if td_count_after > td_count_before:
                 check = True
             else:
                 logger.debug(td_count_before)
                 logger.debug(td_count_after)
-                logger.info("AGAIN processing %s at %s on %s" % (self.pair, self.exchg.name, self.tick))
-                time.sleep(30)
+                logger.info("AGAIN (counter: %d) processing %s at %s on %s" % (counter, self.pair, self.exchg.name, self.tick))
+                counter = counter + 1
+                time.sleep(7)
+
+
+        # while not check and counter < 3:
+        #     t1 = time.time()
+        #     data = self.exchg.get_ticker_data(self.pair, self.tick)
+        #     # logger.debug(data[:2])
+        #     t2 = time.time()
+        #     logger.debug("TIME (get data) of processing %s at %s on %s was %s sec" % (self.pair, self.exchg.name, self.tick, str(t2 - t1)))
+        #
+        #     t1 = time.time()
+        #     to_insert = []
+        #     for d in data:
+        #         # t = TickerData(market=self.market, tick_len=self.tick, time_val=d['T'],
+        #         #                open=d['O'], high=d['H'], low=d['L'], close=d['C'])
+        #         to_insert.append({
+        #             'market': self.market,
+        #             'tick_len': self.tick,
+        #             'time_val': d['T'],
+        #             'open': d['O'],
+        #             'high': d['H'],
+        #             'low': d['L'],
+        #             'close': d['C']
+        #         })
+        #
+        #         # try:
+        #         #     t.save()
+        #         # except IntegrityError:
+        #         #     pass
+        #
+        #     # TickerData.objects.bulk_create([
+        #     #     TickerData(**i) for i in to_insert
+        #     # ])
+        #
+        #     t2 = time.time()
+        #     logger.debug("TIME (save data to db) of processing %s at %s on %s was %s sec" % (self.pair, self.exchg.name, self.tick, str(t2 - t1)))
+
+        # # check if we got new data, if not try again in 7 seconds
+        # t1 = time.time()
+        # td_count_after = len(TickerData.objects.all())
+        # t2 = time.time()
+        # logger.debug("TIME (td_count_after) of processing %s at %s on %s was %s sec" % (self.pair, self.exchg.name, self.tick, str(t2 - t1)))
+        #
+        # logger.debug(td_count_before)
+        # logger.debug(td_count_after)
+        #
+        #     # if td_count_after > td_count_before:
+        #     #     check = True
+        #     # else:
+        #     #     logger.debug(td_count_before)
+        #     #     logger.debug(td_count_after)
+        #     #     logger.info("AGAIN (counter: %d) processing %s at %s on %s" % (counter, self.pair, self.exchg.name, self.tick))
+        #     #     counter = counter + 1
+        #     #     time.sleep(30)
 
         logger.info("finished processing %s at %s on %s" % (self.pair, self.exchg.name, self.tick))
         time.sleep(.5)
+
+    def run(self):
+        # >> > total_time = timeit.timeit('[v for v in range(10000)]', number=10000)
+        t1 = time.time()
+        self.doit()
+        t2 = time.time()
+        logger.debug("TIME of processing %s at %s on %s was %s sec" % (self.pair, self.exchg.name, self.tick, str(t2-t1)))
 
 
 #
@@ -156,8 +245,8 @@ if __name__ == "__main__":
     # development mode
     if not CONFIG["General"]["production"]:
         logger.info(">>> DEVELOPMENT MODE, NO SCHEDULING <<<")
-        recv_data('bittrex', '4h')
-        recv_data('bitfinex', '4h')
+        # recv_data('bittrex', '4h')
+        # recv_data('bitfinex', '4h')
         recv_data('bittrex', '30m')
         import sys
         sys.exit(0)

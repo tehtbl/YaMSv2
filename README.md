@@ -23,8 +23,7 @@ docker-compose down && docker-compose build && docker-compose up
 * cleanup
 ```
 docker run --rm -ti yamsv2_app_tracker /bin/bash
-docker-compose down
-rm -rf data/
+docker-compose down && rm -rf data/
 for i in $(docker ps -a -q); do docker rm -f "${i}"; done
 for i in $(docker images -a -q); do docker rmi "${i}"; done
 ```
@@ -43,3 +42,8 @@ Just ask me in the Chat for a donation address :)
 * https://stackoverflow.com/questions/45595750/use-django-orm-outside-of-django
 * https://stackoverflow.com/questions/41825037/how-to-execute-external-script-in-the-django-environment/41826771#41826771
 * https://stackoverflow.com/questions/33170016/how-to-use-django-1-8-5-orm-without-creating-a-django-project
+* https://vincent.is/speeding-up-django-postgres/
+
+# TODO
+- split getter und getter-controller to address also websockets data getting pushed
+- do normalizing of data stream in between controller to database
