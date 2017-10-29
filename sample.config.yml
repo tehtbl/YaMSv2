@@ -1,35 +1,37 @@
 ---
-General:
+general:
   production: false
   loglevel: debug
 
-  limit_threads_recv: 5
+  limit_threads_recv: 10
   limit_threads_analysis: 5
 
-DataTracker:
+datatracker:
   exchanges:
     - bittrex
     - bitfinex
 
-Analysis:
-  plugins:
-    - 00_cci14
-    - 01_strat1
-    - 02_strat2
+bittrex:
+  enabled: true
+  short: 'btrx'
+  tickers:
+    5m: 'fivemin'
+    30m: 'thirtymin'
+    1h: 'hour' # we have no 4h on bittrex o_O :(
+    1d: 'daily'
+  stake_currency_enabled: true
+  stake_currency: 'BTC'
+  min_price_usd: 0.003
+  max_price_usd: 1
+  blacklist:
+    - XVG
+  analysis:
+    plugins:
+      - 00_cci14
+      - 01_strat1
+      - 02_strat2
 
-#
-# disabled, use filters in kibana
-#
 
-#bittrex:
-#  enabled: true
-#  short: 'btrx'
-#  stake_currency_enabled: true
-#  stake_currency: 'BTC'
-#  min_price_usd: 0.003
-#  max_price_usd: 1
-#  blacklist:
-#    - XVG
 #
 #bifinex:
 #  enabled: true
