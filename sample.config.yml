@@ -2,10 +2,16 @@
 general:
   production: false
   loglevel: debug
+
   limit_threads_recv: 5
   limit_threads_analysis: 5
 
+
+
 datatracker:
+  connection:
+    host: app_tracker
+    port: 9988
   exchanges:
     - bittrex
 #    - bitfinex

@@ -18,17 +18,16 @@
 
 import os
 import sys
+import json
 import time
+import Queue
 import random
 import django
 import logging
 import threading
-
-from pytz import utc
-from apscheduler.schedulers.background import BackgroundScheduler
+import SocketServer
 
 from libyams.utils import get_conf, ticks
-from exchanges import get_exchange_obj
 
 import pprint
 pp = pprint.PrettyPrinter(indent=2)
@@ -36,24 +35,26 @@ pp = pprint.PrettyPrinter(indent=2)
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
+# os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 CONFIG = get_conf()
+queue_save = Queue.Queue()
+thrds_save = []
 
 
 #
 # thread for saving data to database
 #
 class SaveTickerData(threading.Thread):
-    def __init__(self, ex, pair, tick, market):
+    def __init__(self, exchange, market, tick, data):
         threading.Thread.__init__(self)
-        self.exchg = ex
-        self.pair = pair
-        self.tick = tick
+        self.exchg = exchange
         self.market = market
+        self.tick = tick
+        self.data = data
 
     def doit(self):
-        logger.info("processing %s at %s on %s" % (self.pair, self.exchg.name, self.tick))
+        logger.info("processing %s at %s on %s" % (self.market, self.exchg, self.tick))
 
         if self.tick not in ticks.keys():
             raise RuntimeError('unknown tick %s for bittrex' % self.tick)
@@ -206,44 +207,53 @@ class SaveTickerData(threading.Thread):
 
 
 #
-# data receiving method
+# worker thread for analysis
 #
-def recv_data(exchg, tick):
-    thrds = []
+class workerThread(threading.Thread):
+    def __init__(self, q):
+        threading.Thread.__init__(self)
+        self.queue = q
+        self.name = "-WorkerThread-"
 
-    ex = get_exchange_obj(exchg)
+    def run(self):
+        # TODO: check for exceptions
+        logger.debug("starting analysis worker thread")
+        while True:
+            itm = self.queue.get()  # if there is no item, this will wait
 
-    if not ex:
-        logger.debug("got no exchange object, exiting")
-        return False
+            if "exchange" not in itm.keys() or "market" not in itm.keys() or "tick" not in itm.keys() or "data" not in itm.keys():
+                logger.debug("data ins wron format, aborting")
+                continue
 
-    from libyams.orm.models import Market
+            # TODO: check for thread timeout
+            if len(thrds_save) >= CONFIG["general"]["limit_threads_recv"]:
+                for x in thrds_save:
+                    x.join()
+                    thrds_save.remove(x)
 
-    logger.info("getting related currencies from market summary")
-    for pair in ex.get_markets():
-        m, created = Market.objects.get_or_create(exchange=ex.name, pair=pair)
+            t = SaveTickerData(itm['exchange'], itm['market'], itm['tick'], itm['data'])
+            thrds_save.append(t)
+            t.start()
 
-        if len(thrds) >= CONFIG["General"]["limit_threads_recv"]:
-            t = thrds[0]
-            t.join()
-            thrds.remove(t)
+            self.queue.task_done()
+            logger.debug("finished processing item %s" % itm['pair'])
 
-            # for x in thrds:
-            #     x.join()
-            #     thrds.remove(x)
 
-        t = SaveTickerData(ex, pair, tick, m)
-        thrds.append(t)
-        t.start()
+#
+#
+#
+class MyTCPHandler(SocketServer.BaseRequestHandler):
+    def handle(self):
+        # self.request is the TCP socket connected to the client
+        self.data = self.request.recv(1024).strip()
 
-        if not CONFIG["General"]["production"]:
-            return
+        print "{} wrote:".format(self.client_address[0])
+        print self.data
 
-    for x in thrds:
-        x.join()
-        thrds.remove(x)
+        queue_save.put('')
 
-    return True
+        # just send back the same data, but upper-cased
+        self.request.sendall(self.data.upper())
 
 
 #
@@ -251,60 +261,18 @@ def recv_data(exchg, tick):
 #
 if __name__ == "__main__":
 
-    # logger.info("waiting for db to finish starting")
-    # time.sleep(20)
-
     # set log level
     logger.setLevel(logging.INFO)
-    if CONFIG['General']['loglevel'] == 'debug':
+    if CONFIG['general']['loglevel'] == 'debug':
         logger.setLevel(logging.DEBUG)
-
-    # check for exchanges
-    if not len(CONFIG["DataTracker"]["exchanges"]) > 0:
-        logger.info(">>> no exchanges defined, exiting... <<<")
-        os._exit(0)
 
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
     django.setup()
 
-    # development mode
-    if not CONFIG["General"]["production"]:
-        logger.info(">>> DEVELOPMENT MODE, NO SCHEDULING <<<")
-        # recv_data('bittrex', '4h')
-        # recv_data('bitfinex', '4h')
-        # recv_data('bittrex', '30m')
-        recv_data('bittrex', '5m')
-        import sys
-        sys.exit(0)
-        # os._exit(0)
-
     # production mode: set scheduling of executing receiver methods
-    if CONFIG["General"]["production"]:
-        scheduler = BackgroundScheduler(timezone=utc, job_defaults={
-            'max_instances': 10
-        })
+    if CONFIG["general"]["production"]:
+        HOST, PORT = "0.0.0.0", CONFIG["datatracker"]["connection"]["port"]
 
-        # prepare scheduler
-        for exchg in CONFIG["DataTracker"]["exchanges"]:
-
-            # start receiver methods for the first time to initialize data
-            for t in ticks:
-                recv_data(exchg, t)
-
-            # wait some seconds until data is finished aggregating at bittrex-side
-            scheduler.add_job(recv_data, args=(exchg, '5m'), trigger='cron', minute="*/5", second="7")
-            scheduler.add_job(recv_data, args=(exchg, '30m'), trigger='cron', minute="*/30", second="13")
-            scheduler.add_job(recv_data, args=(exchg, '4h'), trigger='cron', hour="*/4", minute="2", second="7")
-            scheduler.add_job(recv_data, args=(exchg, '1d'), trigger='cron', hour="0", minute="5", second="13")
-
-        # start the scheduler
-        scheduler.start()
-
-        try:
-            # This is here to simulate application activity (which keeps the main thread alive).
-            while True:
-                time.sleep(2)
-
-        except (KeyboardInterrupt, SystemExit):
-            # Not strictly necessary if daemonic mode is enabled but should be done if possible
-            scheduler.shutdown()
+        server = SocketServer.TCPServer((HOST, PORT), MyTCPHandler)
+        server.allow_reuse_address = True
+        server.serve_forever()

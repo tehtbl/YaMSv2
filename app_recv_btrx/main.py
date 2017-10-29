@@ -17,6 +17,7 @@
 #
 
 import sys
+import json
 import time
 import logging
 import threading
@@ -123,6 +124,43 @@ class SendTickerData(threading.Thread):
 
         # TODO: check if new data is there
         # TODO: send data to socket for data controller
+        # Example:
+        #     {
+        #         'exchange': self.name,
+        #         'market': 'BTC-XVG'
+        #         'tick': '5m'
+        #         'data': [
+        #             {
+        #                 'open': ...
+        #                 'close': ...
+        #                 'high': ...
+        #                 'low': ...
+        #                 'timestamp': ...
+        #             }
+        #         ]
+        #     }
+
+        import socket
+        import sys
+
+        HOST, PORT = "localhost", 9999
+        data = " ".join(sys.argv[1:])
+
+        # Create a socket (SOCK_STREAM means a TCP socket)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        try:
+            # Connect to server and send data
+            sock.connect((HOST, PORT))
+            sock.sendall(data + "\n")
+
+            # Receive data from the server and shut down
+            received = sock.recv(1024)
+        finally:
+            sock.close()
+
+        print "Sent:     {}".format(data)
+        print "Received: {}".format(received)
 
         # logger.debug(to_insert)
         time.sleep(1)
@@ -193,6 +231,11 @@ if __name__ == "__main__":
         logger.info(">>> DEVELOPMENT MODE, NO SCHEDULING <<<")
         recv_data('5m')
         sys.exit(0)
+
+
+    # TODO: check if data tracker is ready!!!
+
+
 
     # production mode: set scheduling of executing receiver methods
     if CONFIG["general"]["production"]:
