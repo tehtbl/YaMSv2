@@ -1,8 +1,8 @@
 # FROM debian:8
 FROM python:2.7
 
-ENV LOCAL_APPDIR app_tracker
-ENV WORK_APPDIR tracker
+ENV LOCAL_APPDIR app_recv_btrx
+ENV WORK_APPDIR recv_btrx
 
 # RUN apt-get update
 # RUN apt-get -y install ntpdate
@@ -20,6 +20,5 @@ WORKDIR /${WORK_APPDIR}
 COPY config.yml /${WORK_APPDIR}
 COPY docker/${LOCAL_APPDIR}/start.sh /${WORK_APPDIR}/start.sh
 RUN chmod +x /${WORK_APPDIR}/start.sh
-RUN touch /tmp/FIRST_START
 
 COPY ${LOCAL_APPDIR} /${WORK_APPDIR}

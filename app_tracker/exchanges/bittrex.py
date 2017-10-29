@@ -26,14 +26,15 @@ class Bittrex(AbstractExchange):
     #
     # init
     #
-    def __init__(self, cfg):
-        super(Bittrex, self).__init__(cfg)
-        self.tick_dict = {
-            '5m': 'fivemin',
-            '30m': 'thirtymin',
-            '1h': 'hour', # we have no 4h on bittrex o_O :(
-            '1d': 'daily'
-        }
+    def __init__(self, cfg, q):
+        super(Bittrex, self).__init__(cfg. q)
+
+    #
+    # start receiving data from exchange
+    #
+    def start_receiver(self):
+        pass
+
 
     #
     # get available markets

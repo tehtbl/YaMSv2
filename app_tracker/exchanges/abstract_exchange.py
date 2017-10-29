@@ -22,9 +22,9 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 class AbstractExchange(object):
     __metaclass__ = ABCMeta
 
-    def __init__(self, config):
-        self.config = config
-        self.tick_dict = {}
+    def __init__(self, cfg, q):
+        self.config = cfg
+        self.sender_q = q
 
     @property
     def name(self):
@@ -36,18 +36,24 @@ class AbstractExchange(object):
         return self.__class__.__name__
 
     @abstractmethod
-    def get_markets(self):
+    def start_receiver(self):
         """
+        start the exchange receiver, which gets all ticker data and pushes ist into a queue
 
-        :return: returns all possible markets
-        """
-
-    @abstractmethod
-    def get_ticker_data(self, pair, tick):
-        """
-        returns all ticker data for a given pair and interval
-
-        :param pair: pair for the market
-        :param tick: interval to search for
-        :return: json encoded list of list of ohcl data
+        :return: dict of data
+        Example:
+            {
+                'exchange': self.name,
+                'market': 'BTC-XVG'
+                'tick': '5m'
+                'data': [
+                    {
+                        'open': ...
+                        'close': ...
+                        'high': ...
+                        'low': ...
+                        'timestamp': ...
+                    }
+                ]
+            }
         """

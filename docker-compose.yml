@@ -1,30 +1,40 @@
 version: "3"
 services:
-  db:
-    restart: always
-    image: 'postgres:9.5.3'
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./data/pgdata:/var/lib/postgresql/data/
-    environment:
-      POSTGRES_USER: 'pguser'
-      POSTGRES_PASSWORD: 'supersecret'
-      POSTGRES_DB: 'yamsdb'
+#  db:
+#    restart: always
+#    image: 'postgres:9.5.3'
+#    ports:
+#      - "5432:5432"
+#    volumes:
+#      - ./data/pgdata:/var/lib/postgresql/data/
+#    environment:
+#      POSTGRES_USER: 'pguser'
+#      POSTGRES_PASSWORD: 'supersecret'
+#      POSTGRES_DB: 'yamsdb'
 #    logging:
 #      driver: "none"
+#
+#  app_tracker:
+#    build:
+#      context: .
+#      dockerfile: docker/app_tracker/Dockerfile
+#    command: "/bin/bash /tracker/start.sh"
+##    restart: always
+#    depends_on:
+#      - db
+#    links:
+#      - db
 
-  app_tracker:
+  app_recv_btrx:
     build:
       context: .
-      dockerfile: docker/app_tracker/Dockerfile
-    command: "/bin/bash /tracker/start.sh"
+      dockerfile: docker/app_recv_btrx/Dockerfile
+    command: "/bin/bash /recv_btrx/start.sh"
 #    restart: always
-    depends_on:
-      - db
-    links:
-      - db
-
+#    depends_on:
+#      - app_tracker
+#    links:
+#      - app_tracker
 
 
 #  app_analyze:

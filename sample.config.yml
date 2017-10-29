@@ -9,7 +9,7 @@ general:
 datatracker:
   exchanges:
     - bittrex
-    - bitfinex
+#    - bitfinex
 
 bittrex:
   enabled: true
@@ -23,7 +23,7 @@ bittrex:
   stake_currency: 'BTC'
   min_price_usd: 0.003
   max_price_usd: 1
-  blacklist:
+blacklist:
     - XVG
   analysis:
     plugins:
