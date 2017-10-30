@@ -310,19 +310,25 @@ class WebHandler(BaseHTTPRequestHandler):
         self.wfile.write('Path: %s\n' % self.path)
         self.wfile.write('Form data:\n')
 
-        # Echo back information about what was posted in the form
-        for field in form.keys():
-            field_item = form[field]
-            if field_item.filename:
-                # The field contains an uploaded file
-                file_data = field_item.file.read()
-                file_len = len(file_data)
-                del file_data
-                self.wfile.write('\tUploaded %s as "%s" (%d bytes)\n' % \
-                        (field, field_item.filename, file_len))
-            else:
-                # Regular form value
-                self.wfile.write('\t%s=%s\n' % (field, form[field].value))
+        # self.wfile.write('%s\n' % dir(self))
+        # self.wfile.write('%s\n' % self.requestline)
+
+        self.wfile.write('%s\n' % form)
+
+        # # Echo back information about what was posted in the form
+        # for field in form.keys():
+        #     field_item = form[field]
+        #     if field_item.filename:
+        #         # The field contains an uploaded file
+        #         file_data = field_item.file.read()
+        #         file_len = len(file_data)
+        #         del file_data
+        #         self.wfile.write('\tUploaded %s as "%s" (%d bytes)\n' % \
+        #                 (field, field_item.filename, file_len))
+        #     else:
+        #         # Regular form value
+        #         self.wfile.write('\t%s=%s\n' % (field, form[field].value))
+
         return
 
 
