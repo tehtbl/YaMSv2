@@ -11,14 +11,15 @@ services:
       POSTGRES_USER: 'pguser'
       POSTGRES_PASSWORD: 'supersecret'
       POSTGRES_DB: 'yamsdb'
-    logging:
-      driver: "none"
+#    logging:
+#      driver: "none"
 
   app_tracker:
     build:
       context: .
       dockerfile: docker/app_tracker/Dockerfile
-    command: "/bin/bash /tracker/start.sh"
+#    command: "/bin/bash /tracker/start.sh"
+    command: "/usr/local/bin/python /tracker/main.py"
     ports:
       - "9988:9988"
 #    restart: always
@@ -27,16 +28,16 @@ services:
     links:
       - db
 
-  app_recv_btrx:
-    build:
-      context: .
-      dockerfile: docker/app_recv_btrx/Dockerfile
-    command: "/bin/bash /recv_btrx/start.sh"
-#    restart: always
-    depends_on:
-      - app_tracker
-    links:
-      - app_tracker
+#  app_recv_btrx:
+#    build:
+#      context: .
+#      dockerfile: docker/app_recv_btrx/Dockerfile
+#    command: "/bin/bash /recv_btrx/start.sh"
+##    restart: always
+#    depends_on:
+#      - app_tracker
+#    links:
+#      - app_tracker
 
 
 #  app_analyze:

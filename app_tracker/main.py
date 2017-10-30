@@ -18,19 +18,20 @@
 
 import os
 import sys
+import cgi
 import json
 import time
 import Queue
 import random
 import django
+import os.path
 import logging
 import threading
-import SocketServer
+
+from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+from django.core.management import execute_from_command_line
 
 from libyams.utils import get_conf, ticks
-
-import pprint
-pp = pprint.PrettyPrinter(indent=2)
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -38,8 +39,33 @@ logger = logging.getLogger(__name__)
 # os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 CONFIG = get_conf()
+STATUS_RECV = False
+
 queue_save = Queue.Queue()
 thrds_save = []
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+INSTALLED_APPS = [
+    'libyams.orm'
+]
+
+DATABASES = {
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.sqlite3',
+    #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    # }
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'yamsdb',
+        'USER': 'pguser',
+        'PASSWORD': 'supersecret',
+        'HOST': 'db',
+        'PORT': 5432
+    }
+}
+
+SECRET_KEY = 'NOT NEEDED...'
 
 
 #
@@ -209,7 +235,7 @@ class SaveTickerData(threading.Thread):
 #
 # worker thread for analysis
 #
-class workerThread(threading.Thread):
+class WorkerThread(threading.Thread):
     def __init__(self, q):
         threading.Thread.__init__(self)
         self.queue = q
@@ -222,7 +248,7 @@ class workerThread(threading.Thread):
             itm = self.queue.get()  # if there is no item, this will wait
 
             if "exchange" not in itm.keys() or "market" not in itm.keys() or "tick" not in itm.keys() or "data" not in itm.keys():
-                logger.debug("data ins wron format, aborting")
+                logger.debug("data in wrong format, aborting...")
                 continue
 
             # TODO: check for thread timeout
@@ -233,6 +259,7 @@ class workerThread(threading.Thread):
 
             t = SaveTickerData(itm['exchange'], itm['market'], itm['tick'], itm['data'])
             thrds_save.append(t)
+            # t.daemon = True
             t.start()
 
             self.queue.task_done()
@@ -242,18 +269,90 @@ class workerThread(threading.Thread):
 #
 #
 #
-class MyTCPHandler(SocketServer.BaseRequestHandler):
-    def handle(self):
-        # self.request is the TCP socket connected to the client
-        self.data = self.request.recv(1024).strip()
+class WebHandler(BaseHTTPRequestHandler):
+    def _set_headers(self):
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.end_headers()
 
-        print "{} wrote:".format(self.client_address[0])
-        print self.data
+    def do_GET(self):
+        global STATUS_RECV
 
-        queue_save.put('')
+        ret_msg = ""
 
-        # just send back the same data, but upper-cased
-        self.request.sendall(self.data.upper())
+        if self.path == '/status':
+            ret_msg = json.dumps({
+                'status': STATUS_RECV
+            })
+
+        ret_msg = ret_msg + "\r\n"
+
+        self._set_headers()
+        self.wfile.write(ret_msg)
+
+        return
+
+    def do_POST(self):
+        # Parse the form data posted
+        form = cgi.FieldStorage(
+            fp=self.rfile,
+            headers=self.headers,
+            environ={
+                'REQUEST_METHOD': 'POST',
+                'CONTENT_TYPE': self.headers['Content-Type']
+            })
+
+        # Begin the response
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write('Client: %s\n' % str(self.client_address))
+        self.wfile.write('User-agent: %s\n' % str(self.headers['user-agent']))
+        self.wfile.write('Path: %s\n' % self.path)
+        self.wfile.write('Form data:\n')
+
+        # Echo back information about what was posted in the form
+        for field in form.keys():
+            field_item = form[field]
+            if field_item.filename:
+                # The field contains an uploaded file
+                file_data = field_item.file.read()
+                file_len = len(file_data)
+                del file_data
+                self.wfile.write('\tUploaded %s as "%s" (%d bytes)\n' % \
+                        (field, field_item.filename, file_len))
+            else:
+                # Regular form value
+                self.wfile.write('\t%s=%s\n' % (field, form[field].value))
+        return
+
+
+#
+# worker thread for analysis
+#
+class InitDBThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+
+    def run(self):
+        global STATUS_RECV
+
+        check_fn = '/tmp/FIRST_START'
+        if os.path.exists(check_fn):
+            logger.info("waiting for db to finish starting")
+            time.sleep(25)
+            os.remove(check_fn)
+
+        time.sleep(5)
+
+        # bootstrap ORM
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
+        execute_from_command_line([sys.argv[0], 'makemigrations'])
+        execute_from_command_line([sys.argv[0], 'migrate'])
+        django.setup()
+
+        STATUS_RECV = True
+
+        return
 
 
 #
@@ -266,13 +365,18 @@ if __name__ == "__main__":
     if CONFIG['general']['loglevel'] == 'debug':
         logger.setLevel(logging.DEBUG)
 
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
-    django.setup()
-
-    # production mode: set scheduling of executing receiver methods
+    # start
     if CONFIG["general"]["production"]:
-        HOST, PORT = "0.0.0.0", CONFIG["datatracker"]["connection"]["port"]
+        logger.info("start init_db()")
+        t1 = InitDBThread()
+        t1.start()
+        time.sleep(.5)
 
-        server = SocketServer.TCPServer((HOST, PORT), MyTCPHandler)
-        server.allow_reuse_address = True
+        logger.info("start worker thread")
+        t2 = WorkerThread(queue_save)
+        t2.start()
+        time.sleep(.5)
+
+        logger.info("starting web server")
+        server = HTTPServer(("0.0.0.0", CONFIG["datatracker"]["connection"]["port"]), WebHandler)
         server.serve_forever()
