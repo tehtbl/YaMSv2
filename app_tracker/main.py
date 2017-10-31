@@ -74,12 +74,12 @@ class SaveTickerData(threading.Thread):
     def __init__(self, exchange, market, tick, data):
         threading.Thread.__init__(self)
         self.exchg = exchange
-        self.market = market
+        self.pair = market
         self.tick = tick
         self.data = data
 
     def doit(self):
-        logger.info("processing %s at %s on %s" % (self.market, self.exchg, self.tick))
+        logger.info("processing %s at %s on %s" % (self.pair, self.exchg, self.tick))
 
         if self.tick not in ticks.keys():
             raise RuntimeError('unknown tick %s for bittrex' % self.tick)
@@ -91,40 +91,21 @@ class SaveTickerData(threading.Thread):
         max_tries = 5
         max_wait = random.sample(xrange(15), 1)[0]
 
+        # TODO: set index on TickerData.{market, tick_len}
         t1 = time.time()
-        td_all = TickerData.objects.filter(market=self.market, tick_len=self.tick)
+        td_all = TickerData.objects.filter(market=self.pair, tick_len=self.tick)
         td_count_before = len(td_all)
         t2 = time.time()
         logger.debug("TIME (td_count_before) of processing %s at %s on %s was %s sec" % ( self.pair, self.exchg.name, self.tick, str(t2 - t1)))
 
         while counter < max_tries:
             t1 = time.time()
-            data = self.exchg.get_ticker_data(self.pair, self.tick)
-            # logger.debug(data[:2])
-            t2 = time.time()
-            logger.debug("TIME (get data) of processing %s at %s on %s was %s sec" % (self.pair, self.exchg.name, self.tick, str(t2 - t1)))
-
-            t1 = time.time()
-            # for d in data:
-            #     # t = TickerData(market=self.market, tick_len=self.tick, time_val=d['T'],
-            #     #                open=d['O'], high=d['H'], low=d['L'], close=d['C'])
-            #     #
-            #     # if t not in td_all.iterator():
-            #     #     try:
-            #     #         t.save()
-            #     #     except IntegrityError:
-            #     #         pass
-            #
-            #     t, created = TickerData.objects.get_or_create(market=self.market, tick_len=self.tick, time_val=d['T'], open=d['O'], high=d['H'], low=d['L'], close=d['C'])
-            #     if created:
-            #         logger.debug("OBJ created while processing %s at %s on %s was %s sec" % (self.pair, self.exchg.name, self.tick, str(t2 - t1)))
-
             to_insert = []
             # for d in data[:5]:
-            for d in data:
+            for d in self.data:
                 # t = TickerData(market=self.market, tick_len=self.tick, time_val=d['T'], open=d['O'], high=d['H'], low=d['L'], close=d['C'])
 
-                t = TickerData.objects.filter(market=self.market, tick_len=self.tick, time_val=d['T'])
+                t = TickerData.objects.filter(market=self.pair, tick_len=self.tick, time_val=d['time_val'])
 
                 # logger.debug("d: %s" % d)
                 # logger.debug("t: %s" % t)
@@ -167,59 +148,6 @@ class SaveTickerData(threading.Thread):
                 counter = counter + 1
                 time.sleep(max_wait)
 
-
-        # while not check and counter < 3:
-        #     t1 = time.time()
-        #     data = self.exchg.get_ticker_data(self.pair, self.tick)
-        #     # logger.debug(data[:2])
-        #     t2 = time.time()
-        #     logger.debug("TIME (get data) of processing %s at %s on %s was %s sec" % (self.pair, self.exchg.name, self.tick, str(t2 - t1)))
-        #
-        #     t1 = time.time()
-        #     to_insert = []
-        #     for d in data:
-        #         # t = TickerData(market=self.market, tick_len=self.tick, time_val=d['T'],
-        #         #                open=d['O'], high=d['H'], low=d['L'], close=d['C'])
-        #         to_insert.append({
-        #             'market': self.market,
-        #             'tick_len': self.tick,
-        #             'time_val': d['T'],
-        #             'open': d['O'],
-        #             'high': d['H'],
-        #             'low': d['L'],
-        #             'close': d['C']
-        #         })
-        #
-        #         # try:
-        #         #     t.save()
-        #         # except IntegrityError:
-        #         #     pass
-        #
-        #     # TickerData.objects.bulk_create([
-        #     #     TickerData(**i) for i in to_insert
-        #     # ])
-        #
-        #     t2 = time.time()
-        #     logger.debug("TIME (save data to db) of processing %s at %s on %s was %s sec" % (self.pair, self.exchg.name, self.tick, str(t2 - t1)))
-
-        # # check if we got new data, if not try again in 7 seconds
-        # t1 = time.time()
-        # td_count_after = len(TickerData.objects.all())
-        # t2 = time.time()
-        # logger.debug("TIME (td_count_after) of processing %s at %s on %s was %s sec" % (self.pair, self.exchg.name, self.tick, str(t2 - t1)))
-        #
-        # logger.debug(td_count_before)
-        # logger.debug(td_count_after)
-        #
-        #     # if td_count_after > td_count_before:
-        #     #     check = True
-        #     # else:
-        #     #     logger.debug(td_count_before)
-        #     #     logger.debug(td_count_after)
-        #     #     logger.info("AGAIN (counter: %d) processing %s at %s on %s" % (counter, self.pair, self.exchg.name, self.tick))
-        #     #     counter = counter + 1
-        #     #     time.sleep(30)
-
         logger.info("finished processing %s at %s on %s" % (self.pair, self.exchg.name, self.tick))
         time.sleep(.5)
 
@@ -246,24 +174,22 @@ class WorkerThread(threading.Thread):
         while True:
             itm = self.queue.get()  # if there is no item, this will wait
 
-            if "exchange" not in itm.keys() or "market" not in itm.keys() or "tick" not in itm.keys() or "data" not in itm.keys():
+            if "exchange" not in itm.keys() or "pair" not in itm.keys() or "tick" not in itm.keys() or "data" not in itm.keys():
                 logger.debug("data in wrong format, aborting...")
                 continue
 
             logger.debug("got valid data (len: %s) from '%s'-tracker for '%s'" % (len(itm['data']), itm['exchange'], itm['tick']))
 
-            # # TODO: check for thread timeout
-            # if len(thrds_save) >= CONFIG["general"]["limit_threads_recv"]:
-            #     for x in thrds_save:
-            #         x.join()
-            #         thrds_save.remove(x)
-            #
-            # t = SaveTickerData(itm['exchange'], itm['market'], itm['tick'], itm['data'])
-            # thrds_save.append(t)
-            # # t.daemon = True
-            # t.start()
+            # TODO: check for thread timeout
+            if len(thrds_save) >= CONFIG["general"]["limit_threads_recv"]:
+                for x in thrds_save:
+                    x.join()
+                    thrds_save.remove(x)
 
-
+            t = SaveTickerData(itm['exchange'], itm['pair'], itm['tick'], itm['data'])
+            thrds_save.append(t)
+            # t.daemon = True
+            t.start()
 
             self.queue.task_done()
             logger.debug("finished processing item %s" % itm['pair'])

@@ -36,7 +36,7 @@ from django.db import models
 #     ('2', 'buy'),
 #     ('3', 'sell'),
 # )
-#
+#time_val
 # CH_SignalStrength = (
 #     ('1', 'none'),
 #     ('2', 'weak'),

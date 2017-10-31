@@ -148,7 +148,7 @@ class SendTickerData(threading.Thread):
             try:
                 d = {
                     'exchange': self.exchg,
-                    'market': self.pair,
+                    'pair': self.pair,
                     'tick': self.tick,
                     'data': to_insert
                 }
