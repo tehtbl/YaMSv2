@@ -268,6 +268,7 @@ class WorkerThread(threading.Thread):
 
 #
 #
+# TODO: check for https://pypi.python.org/pypi/klein/0.2.3
 #
 class WebHandler(BaseHTTPRequestHandler):
     def _set_headers(self):
@@ -293,41 +294,22 @@ class WebHandler(BaseHTTPRequestHandler):
         return
 
     def do_POST(self):
-        # Parse the form data posted
-        form = cgi.FieldStorage(
-            fp=self.rfile,
-            headers=self.headers,
-            environ={
-                'REQUEST_METHOD': 'POST',
-                'CONTENT_TYPE': self.headers['Content-Type']
-            })
+        global STATUS_RECV
+        global queue_save
 
-        # Begin the response
+        self._set_headers()
         self.send_response(200)
         self.end_headers()
-        self.wfile.write('Client: %s\n' % str(self.client_address))
-        self.wfile.write('User-agent: %s\n' % str(self.headers['user-agent']))
-        self.wfile.write('Path: %s\n' % self.path)
-        self.wfile.write('Form data:\n')
 
-        # self.wfile.write('%s\n' % dir(self))
-        # self.wfile.write('%s\n' % self.requestline)
+        data = '{"error": "not yet ready to accept data, see GET /status"}'
+        if STATUS_RECV:
+            data_string = self.rfile.read(int(self.headers['Content-Length']))
 
-        self.wfile.write('%s\n' % form)
+            # TODO: add timestamp, etc. to dict???
+            data = json.loads(data_string)
+            queue_save.put(data)
 
-        # # Echo back information about what was posted in the form
-        # for field in form.keys():
-        #     field_item = form[field]
-        #     if field_item.filename:
-        #         # The field contains an uploaded file
-        #         file_data = field_item.file.read()
-        #         file_len = len(file_data)
-        #         del file_data
-        #         self.wfile.write('\tUploaded %s as "%s" (%d bytes)\n' % \
-        #                 (field, field_item.filename, file_len))
-        #     else:
-        #         # Regular form value
-        #         self.wfile.write('\t%s=%s\n' % (field, form[field].value))
+        self.wfile.write(data)
 
         return
 
