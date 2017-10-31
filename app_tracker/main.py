@@ -18,7 +18,6 @@
 
 import os
 import sys
-import cgi
 import json
 import time
 import Queue
@@ -251,16 +250,20 @@ class WorkerThread(threading.Thread):
                 logger.debug("data in wrong format, aborting...")
                 continue
 
-            # TODO: check for thread timeout
-            if len(thrds_save) >= CONFIG["general"]["limit_threads_recv"]:
-                for x in thrds_save:
-                    x.join()
-                    thrds_save.remove(x)
+            logger.debug("got valid data (len: %s) from '%s'-tracker for '%s'" % (len(itm['data']), itm['exchange'], itm['tick']))
 
-            t = SaveTickerData(itm['exchange'], itm['market'], itm['tick'], itm['data'])
-            thrds_save.append(t)
-            # t.daemon = True
-            t.start()
+            # # TODO: check for thread timeout
+            # if len(thrds_save) >= CONFIG["general"]["limit_threads_recv"]:
+            #     for x in thrds_save:
+            #         x.join()
+            #         thrds_save.remove(x)
+            #
+            # t = SaveTickerData(itm['exchange'], itm['market'], itm['tick'], itm['data'])
+            # thrds_save.append(t)
+            # # t.daemon = True
+            # t.start()
+
+
 
             self.queue.task_done()
             logger.debug("finished processing item %s" % itm['pair'])

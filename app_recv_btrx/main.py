@@ -23,7 +23,9 @@ import logging
 import threading
 import requests as req
 
+
 from pytz import utc
+from requests import ConnectionError
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from libyams.utils import get_conf, ticks, get_btc_usd
@@ -32,6 +34,8 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(leve
 logger = logging.getLogger(__name__)
 
 CONFIG = get_conf()
+TRACKER_URL = 'http://%s:%s' % (CONFIG["datatracker"]["connection"]["host"], CONFIG["datatracker"]["connection"]["port"])
+TRACKER_CONN_URL = '%s/status' % TRACKER_URL
 
 
 #
@@ -140,30 +144,24 @@ class SendTickerData(threading.Thread):
         #         ]
         #     }
 
-        import socket
-        import sys
+        while True:
+            try:
+                d = {
+                    'exchange': self.exchg,
+                    'market': self.pair,
+                    'tick': self.tick,
+                    'data': to_insert
+                }
+                r = req.post(TRACKER_URL, json=d)
 
-        HOST, PORT = "localhost", 9999
-        data = " ".join(sys.argv[1:])
+                if r.status_code is 200:
+                    break
 
-        # Create a socket (SOCK_STREAM means a TCP socket)
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                logger.debug("issue sending data to tracker, waiting 10s before sending data again...")
+                time.sleep(10)
 
-        try:
-            # Connect to server and send data
-            sock.connect((HOST, PORT))
-            sock.sendall(data + "\n")
-
-            # Receive data from the server and shut down
-            received = sock.recv(1024)
-        finally:
-            sock.close()
-
-        print "Sent:     {}".format(data)
-        print "Received: {}".format(received)
-
-        # logger.debug(to_insert)
-        time.sleep(1)
+            except ConnectionError:
+                continue
 
         logger.info("finished processing %s at %s on %s" % (self.pair, self.exchg, self.tick))
         time.sleep(.5)
@@ -232,13 +230,26 @@ if __name__ == "__main__":
         recv_data('5m')
         sys.exit(0)
 
-
-    # TODO: check if data tracker is ready!!!
-
-
-
     # production mode: set scheduling of executing receiver methods
     if CONFIG["general"]["production"]:
+        # check if data tracker is ready!!!
+        while True:
+            try:
+                r = req.get(TRACKER_CONN_URL)
+
+                if r.status_code is 200:
+                    data = r.json()
+                    if data['status']:
+                        break
+
+                logger.debug("tracker not yet ready, waiting another 10s...")
+                time.sleep(10)
+
+            except ConnectionError:
+                continue
+
+        # start receiver and scheduler
+        logger.debug("tracker ready, starting bittrex receiver")
         scheduler = BackgroundScheduler(timezone=utc, job_defaults={
             'max_instances': 10
         })

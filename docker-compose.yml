@@ -22,22 +22,22 @@ services:
     command: "/usr/local/bin/python /tracker/main.py"
     ports:
       - "9988:9988"
-#    restart: always
+    restart: always
     depends_on:
       - db
     links:
       - db
 
-#  app_recv_btrx:
-#    build:
-#      context: .
-#      dockerfile: docker/app_recv_btrx/Dockerfile
-#    command: "/bin/bash /recv_btrx/start.sh"
-##    restart: always
-#    depends_on:
-#      - app_tracker
-#    links:
-#      - app_tracker
+  app_recv_btrx:
+    build:
+      context: .
+      dockerfile: docker/app_recv_btrx/Dockerfile
+    command: "/bin/bash /recv_btrx/start.sh"
+    restart: always
+    depends_on:
+      - app_tracker
+    links:
+      - app_tracker
 
 
 #  app_analyze:
