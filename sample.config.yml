@@ -11,9 +11,6 @@ general:
     port: 6379
 
 datatracker:
-  connection:
-    host: app_tracker
-    port: 9988
   exchanges:
     - bittrex
 #    - bitfinex

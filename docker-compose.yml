@@ -24,10 +24,7 @@ services:
     build:
       context: .
       dockerfile: docker/app_tracker/Dockerfile
-#    command: "/bin/bash /tracker/start.sh"
     command: "/usr/local/bin/python /tracker/main.py"
-    ports:
-      - "9988:9988"
     depends_on:
       - db
       - redis

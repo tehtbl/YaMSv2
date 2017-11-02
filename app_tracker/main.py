@@ -20,6 +20,7 @@ import os
 import sys
 import json
 import time
+import redis
 import Queue
 import random
 import django
@@ -38,7 +39,8 @@ logger = logging.getLogger(__name__)
 # os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 CONFIG = get_conf()
-STATUS_RECV = False
+# STATUS_RECV = False
+CON_REDIS = None
 
 queue_save = Queue.Queue()
 thrds_save = []
@@ -196,54 +198,6 @@ class WorkerThread(threading.Thread):
 
 
 #
-#
-# TODO: check for https://pypi.python.org/pypi/klein/0.2.3
-#
-class WebHandler(BaseHTTPRequestHandler):
-    def _set_headers(self):
-        self.send_response(200)
-        self.send_header('Content-Type', 'application/json; charset=utf-8')
-        self.end_headers()
-
-    def do_GET(self):
-        global STATUS_RECV
-
-        ret_msg = ""
-
-        if self.path == '/status':
-            ret_msg = json.dumps({
-                'status': STATUS_RECV
-            })
-
-        ret_msg = ret_msg + "\r\n"
-
-        self._set_headers()
-        self.wfile.write(ret_msg)
-
-        return
-
-    def do_POST(self):
-        global STATUS_RECV
-        global queue_save
-
-        self._set_headers()
-        self.send_response(200)
-        self.end_headers()
-
-        data = '{"error": "not yet ready to accept data, see GET /status"}'
-        if STATUS_RECV:
-            data_string = self.rfile.read(int(self.headers['Content-Length']))
-
-            # TODO: add timestamp, etc. to dict???
-            data = json.loads(data_string)
-            queue_save.put(data)
-
-        self.wfile.write(data)
-
-        return
-
-
-#
 # worker thread for analysis
 #
 class InitDBThread(threading.Thread):
@@ -251,7 +205,7 @@ class InitDBThread(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
-        global STATUS_RECV
+        global CON_REDIS
 
         check_fn = '/tmp/FIRST_START'
         if os.path.exists(check_fn):
@@ -267,7 +221,7 @@ class InitDBThread(threading.Thread):
         execute_from_command_line([sys.argv[0], 'migrate'])
         django.setup()
 
-        STATUS_RECV = True
+        CON_REDIS.set('STATUS_RECV', True)
 
         return
 
@@ -284,6 +238,10 @@ if __name__ == "__main__":
 
     # start
     if CONFIG["general"]["production"]:
+        logger.info("setup redis connection")
+        CON_REDIS = redis.Redis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
+        CON_REDIS.set('STATUS_RECV', False)
+
         logger.info("start init_db()")
         t1 = InitDBThread()
         t1.start()
@@ -292,8 +250,3 @@ if __name__ == "__main__":
         logger.info("start worker thread")
         t2 = WorkerThread(queue_save)
         t2.start()
-        time.sleep(.5)
-
-        logger.info("starting web server")
-        server = HTTPServer(("0.0.0.0", CONFIG["datatracker"]["connection"]["port"]), WebHandler)
-        server.serve_forever()

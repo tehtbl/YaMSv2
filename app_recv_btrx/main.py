@@ -18,6 +18,7 @@
 
 import sys
 import json
+import redis
 import time
 import logging
 import threading
@@ -34,8 +35,7 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(leve
 logger = logging.getLogger(__name__)
 
 CONFIG = get_conf()
-TRACKER_URL = 'http://%s:%s' % (CONFIG["datatracker"]["connection"]["host"], CONFIG["datatracker"]["connection"]["port"])
-TRACKER_CONN_URL = '%s/status' % TRACKER_URL
+CON_REDIS = None
 
 
 #
@@ -107,6 +107,8 @@ class SendTickerData(threading.Thread):
         self.exchg = CONFIG["bittrex"]["short"]
 
     def doit(self):
+        global CON_REDIS
+
         logger.info("processing %s at %s on %s" % (self.pair, self.exchg, self.tick))
 
         if self.tick not in ticks.keys():
@@ -152,7 +154,7 @@ class SendTickerData(threading.Thread):
                     'tick': self.tick,
                     'data': to_insert
                 }
-                r = req.post(TRACKER_URL, json=d)
+                r = req.post('localhost', json=d)
 
                 if r.status_code is 200:
                     break
@@ -232,21 +234,21 @@ if __name__ == "__main__":
 
     # production mode: set scheduling of executing receiver methods
     if CONFIG["general"]["production"]:
+        logger.info("setup redis connection")
+        CON_REDIS = redis.Redis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
+
         # check if data tracker is ready!!!
         while True:
-            try:
-                r = req.get(TRACKER_CONN_URL)
+            flag = bool(CON_REDIS.get('STATUS_RECV'))
 
-                if r.status_code is 200:
-                    data = r.json()
-                    if data['status']:
-                        break
+            logger.debug("received flag type:" + str(type(flag)))
+            logger.debug("received flag:" + str(flag))
 
-                logger.debug("tracker not yet ready, waiting another 10s...")
-                time.sleep(10)
+            if flag:
+                break
 
-            except ConnectionError:
-                continue
+            logger.debug("tracker not yet ready, waiting another 10s...")
+            time.sleep(10)
 
         # start receiver and scheduler
         logger.debug("tracker ready, starting bittrex receiver")
