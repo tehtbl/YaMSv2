@@ -6,7 +6,9 @@ general:
   limit_threads_recv: 5
   limit_threads_analysis: 5
 
-
+  redis:
+    host: redis
+    port: 6379
 
 datatracker:
   connection:

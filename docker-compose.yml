@@ -1,7 +1,6 @@
 version: "3"
 services:
   db:
-    restart: always
     image: 'postgres:9.5.3'
     ports:
       - "5432:5432"
@@ -14,6 +13,13 @@ services:
 #    logging:
 #      driver: "none"
 
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redisdata:/data
+
   app_tracker:
     build:
       context: .
@@ -22,23 +28,22 @@ services:
     command: "/usr/local/bin/python /tracker/main.py"
     ports:
       - "9988:9988"
-    restart: always
     depends_on:
       - db
+      - redis
     links:
       - db
+      - redis
 
   app_recv_btrx:
     build:
       context: .
       dockerfile: docker/app_recv_btrx/Dockerfile
     command: "/bin/bash /recv_btrx/start.sh"
-    restart: always
     depends_on:
-      - app_tracker
+      - redis
     links:
-      - app_tracker
-
+      - redis
 
 #  app_analyze:
 #    build:
@@ -74,15 +79,3 @@ services:
 #      - elasticsearch
 #    restart: always
 
-
-
-
-
-
-#  redis:
-#    restart: always
-#    image: redis:latest
-#    ports:
-#      - "6379:6379"
-#    volumes:
-#      - redisdata:/data

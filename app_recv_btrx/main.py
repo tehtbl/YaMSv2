@@ -115,7 +115,7 @@ class SendTickerData(threading.Thread):
         data = get_ticker_data(self.pair, CONFIG["bittrex"]["tickers"][self.tick])
 
         to_insert = []
-        for d in data[:5]:
+        for d in data:
             to_insert.append({
                 'market': self.pair,
                 'tick_len': self.tick,
@@ -179,27 +179,27 @@ class SendTickerData(threading.Thread):
 def recv_data(tick):
     thrds = []
 
-    logger.info("getting related currencies from market summary")
-    for pair in get_related_currencies():
-        if len(thrds) >= CONFIG["general"]["limit_threads_recv"]:
-            t = thrds[0]
-            t.join()
-            thrds.remove(t)
-
-            # for x in thrds:
-            #     x.join()
-            #     thrds.remove(x)
-
-        t = SendTickerData(pair, tick)
-        thrds.append(t)
-        t.start()
-
-        if not CONFIG["general"]["production"]:
-            return
-
-    for x in thrds:
-        x.join()
-        thrds.remove(x)
+    # logger.info("getting related currencies from market summary")
+    # for pair in get_related_currencies():
+    #     if len(thrds) >= CONFIG["general"]["limit_threads_recv"]:
+    #         t = thrds[0]
+    #         t.join()
+    #         thrds.remove(t)
+    #
+    #         # for x in thrds:
+    #         #     x.join()
+    #         #     thrds.remove(x)
+    #
+    #     t = SendTickerData(pair, tick)
+    #     thrds.append(t)
+    #     t.start()
+    #
+    #     if not CONFIG["general"]["production"]:
+    #         return
+    #
+    # for x in thrds:
+    #     x.join()
+    #     thrds.remove(x)
 
     return True
 

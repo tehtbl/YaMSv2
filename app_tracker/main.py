@@ -71,10 +71,10 @@ SECRET_KEY = 'NOT NEEDED...'
 # thread for saving data to database
 #
 class SaveTickerData(threading.Thread):
-    def __init__(self, exchange, market, tick, data):
+    def __init__(self, exchange, pair, tick, data):
         threading.Thread.__init__(self)
-        self.exchg = exchange
-        self.pair = market
+        self.exchg = exchange # TODO: muss ein Market model sein!
+        self.pair = pair
         self.tick = tick
         self.data = data
 
