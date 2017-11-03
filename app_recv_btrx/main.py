@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 CONFIG = get_conf()
 CON_REDIS = None
-
+PUBSUB = None
 
 #
 # get available markets
@@ -236,16 +236,20 @@ if __name__ == "__main__":
     if CONFIG["general"]["production"]:
         logger.info("setup redis connection")
         CON_REDIS = redis.Redis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
+        # PUBSUB = CON_REDIS.pubsub(ignore_subscribe_messages=True)
+        PUBSUB = CON_REDIS.pubsub()
 
         # check if data tracker is ready!!!
         while True:
-            flag = bool(CON_REDIS.get('STATUS_RECV'))
+            logger.debug(PUBSUB.subscribe('tracker-db-channel'))
+            msg = PUBSUB.get_message()
 
-            logger.debug("received flag type:" + str(type(flag)))
-            logger.debug("received flag:" + str(flag))
+            # logger.debug("received msg type:" + str(type(msg)))
+            # logger.debug("received msg:" + str(msg))
 
-            if flag:
-                break
+            if msg is not None:
+                if msg['data'] is 'ready':
+                    break
 
             logger.debug("tracker not yet ready, waiting another 10s...")
             time.sleep(10)
