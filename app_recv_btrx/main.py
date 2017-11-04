@@ -235,21 +235,29 @@ if __name__ == "__main__":
     # production mode: set scheduling of executing receiver methods
     if CONFIG["general"]["production"]:
         logger.info("setup redis connection")
-        CON_REDIS = redis.Redis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
+        CON_REDIS = redis.StrictRedis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
         # PUBSUB = CON_REDIS.pubsub(ignore_subscribe_messages=True)
         PUBSUB = CON_REDIS.pubsub()
+        PUBSUB.subscribe('tracker-db-channel')
+
+        logger.debug(CON_REDIS)
+        logger.debug(PUBSUB)
 
         # check if data tracker is ready!!!
         while True:
-            logger.debug(PUBSUB.subscribe('tracker-db-channel'))
             msg = PUBSUB.get_message()
 
-            # logger.debug("received msg type:" + str(type(msg)))
-            # logger.debug("received msg:" + str(msg))
+            logger.debug("received msg type:" + str(type(msg)))
+            logger.debug("received msg:" + str(msg))
 
-            if msg is not None:
-                if msg['data'] is 'ready':
+            # if type(msg) is dict:
+            if isinstance(msg, dict):
+
+            # try:
+                if msg['data'] == 'ready':
                     break
+            # except:
+            #     pass
 
             logger.debug("tracker not yet ready, waiting another 10s...")
             time.sleep(10)

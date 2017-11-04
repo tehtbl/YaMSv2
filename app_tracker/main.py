@@ -208,13 +208,13 @@ class InitDBThread(threading.Thread):
     def run(self):
         global CON_REDIS
 
-        check_fn = '/tmp/FIRST_START'
-        if os.path.exists(check_fn):
-            logger.info("waiting for db to finish starting")
-            time.sleep(25)
-            os.remove(check_fn)
-
-        time.sleep(5)
+        # check_fn = '/tmp/FIRST_START'
+        # if os.path.exists(check_fn):
+        #     logger.info("waiting for db to finish starting")
+        #     time.sleep(25)
+        #     os.remove(check_fn)
+        #
+        # time.sleep(5)
 
         # bootstrap ORM
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
@@ -226,7 +226,8 @@ class InitDBThread(threading.Thread):
 
         # CON_REDIS.set('STATUS_RECV', 1)
         # PUBSUB.publish('app-tracker-channel', 'ready')
-        CON_REDIS.publish('tracker-db-chan', 'ready')
+        # CON_REDIS.publish('tracker-db-chan', 'ready')
+        CON_REDIS.publish('tracker-db-channel', 'ready')
 
         return
 
@@ -255,11 +256,11 @@ if __name__ == "__main__":
 
         # bootstrap ORM
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
-        django.setup()
+        # django.setup()
         time.sleep(1)
+        CON_REDIS.publish('tracker-db-channel', 'ready')
 
         logger.info("start worker thread")
         t2 = WorkerThread(queue_save)
         t2.start()
 
-        CON_REDIS.publish('tracker-db-channel', 'ready')
