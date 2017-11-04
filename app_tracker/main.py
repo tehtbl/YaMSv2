@@ -28,8 +28,6 @@ import os.path
 import logging
 import threading
 
-from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
-from django.core.management import execute_from_command_line
 
 from libyams.utils import get_conf, ticks
 
@@ -39,35 +37,11 @@ logger = logging.getLogger(__name__)
 # os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 CONFIG = get_conf()
-# STATUS_RECV = False
 CON_REDIS = None
 PUBSUB = None
 
 queue_save = Queue.Queue()
 thrds_save = []
-
-# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-#
-# INSTALLED_APPS = [
-#     'libyams.orm'
-# ]
-#
-# DATABASES = {
-#     # 'default': {
-#     #     'ENGINE': 'django.db.backends.sqlite3',
-#     #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-#     # }
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': 'yamsdb',
-#         'USER': 'pguser',
-#         'PASSWORD': 'supersecret',
-#         'HOST': 'db',
-#         'PORT': 5432
-#     }
-# }
-#
-# SECRET_KEY = 'NOT NEEDED...'
 
 
 #
@@ -199,40 +173,6 @@ class WorkerThread(threading.Thread):
 
 
 #
-# worker thread for analysis
-#
-class InitDBThread(threading.Thread):
-    def __init__(self):
-        threading.Thread.__init__(self)
-
-    def run(self):
-        global CON_REDIS
-
-        # check_fn = '/tmp/FIRST_START'
-        # if os.path.exists(check_fn):
-        #     logger.info("waiting for db to finish starting")
-        #     time.sleep(25)
-        #     os.remove(check_fn)
-        #
-        # time.sleep(5)
-
-        # bootstrap ORM
-        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
-        # execute_from_command_line([sys.argv[0], 'makemigrations'])
-        # execute_from_command_line([sys.argv[0], 'migrate'])
-        django.setup()
-
-        time.sleep(5)
-
-        # CON_REDIS.set('STATUS_RECV', 1)
-        # PUBSUB.publish('app-tracker-channel', 'ready')
-        # CON_REDIS.publish('tracker-db-chan', 'ready')
-        CON_REDIS.publish('tracker-db-channel', 'ready')
-
-        return
-
-
-#
 # MAiN
 #
 if __name__ == "__main__":
@@ -246,21 +186,13 @@ if __name__ == "__main__":
     if CONFIG["general"]["production"]:
         logger.info("setup redis connection")
         CON_REDIS = redis.StrictRedis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
-        # CON_REDIS.set('STATUS_RECV', 0)
-        # PUBSUB = CON_REDIS.pubsub()
-
-        logger.info("start init_db()")
-        # t1 = InitDBThread()
-        # t1.start()
-        # time.sleep(.5)
 
         # bootstrap ORM
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
-        # django.setup()
-        time.sleep(1)
+        django.setup()
         CON_REDIS.publish('tracker-db-channel', 'ready')
 
+        # start up worker thread
         logger.info("start worker thread")
         t2 = WorkerThread(queue_save)
         t2.start()
-

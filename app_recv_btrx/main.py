@@ -38,6 +38,7 @@ CONFIG = get_conf()
 CON_REDIS = None
 PUBSUB = None
 
+
 #
 # get available markets
 #
@@ -240,26 +241,21 @@ if __name__ == "__main__":
         PUBSUB = CON_REDIS.pubsub()
         PUBSUB.subscribe('tracker-db-channel')
 
-        logger.debug(CON_REDIS)
-        logger.debug(PUBSUB)
+        # logger.debug(CON_REDIS)
+        # logger.debug(PUBSUB)
 
         # check if data tracker is ready!!!
         while True:
             msg = PUBSUB.get_message()
 
-            logger.debug("received msg type:" + str(type(msg)))
-            logger.debug("received msg:" + str(msg))
+            # logger.debug("received msg type:" + str(type(msg)))
+            # logger.debug("received msg:" + str(msg))
 
-            # if type(msg) is dict:
             if isinstance(msg, dict):
-
-            # try:
                 if msg['data'] == 'ready':
                     break
-            # except:
-            #     pass
 
-            logger.debug("tracker not yet ready, waiting another 10s...")
+            logger.info("tracker not yet ready, waiting another 10s...")
             time.sleep(10)
 
         # start receiver and scheduler
@@ -281,11 +277,9 @@ if __name__ == "__main__":
         # start the scheduler
         scheduler.start()
 
+        # simulate application activity
         try:
-            # This is here to simulate application activity (which keeps the main thread alive).
             while True:
-                time.sleep(2)
-
+                time.sleep(5)
         except (KeyboardInterrupt, SystemExit):
-            # Not strictly necessary if daemonic mode is enabled but should be done if possible
             scheduler.shutdown()
