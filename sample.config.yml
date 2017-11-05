@@ -4,6 +4,7 @@ general:
   loglevel: debug
 
   limit_threads_recv: 5
+  limit_threads_save: 10
   limit_threads_analysis: 5
 
   redis:

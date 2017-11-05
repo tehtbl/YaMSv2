@@ -107,7 +107,7 @@ class SendTickerData(threading.Thread):
         self.tick = tick
         self.exchg = CONFIG["bittrex"]["short"]
 
-    def doit(self):
+    def run(self):
         global CON_REDIS
 
         logger.info("processing %s at %s on %s" % (self.pair, self.exchg, self.tick))
@@ -115,8 +115,10 @@ class SendTickerData(threading.Thread):
         if self.tick not in ticks.keys():
             raise RuntimeError('unknown tick %s for bittrex' % self.tick)
 
+        # data = get_ticker_data(self.pair, CONFIG["bittrex"]["tickers"][self.tick])[:3]
         data = get_ticker_data(self.pair, CONFIG["bittrex"]["tickers"][self.tick])
 
+        # transform data for later storing in db
         to_insert = []
         for d in data:
             to_insert.append({
@@ -129,51 +131,17 @@ class SendTickerData(threading.Thread):
                 'close': float(d['C'])
             })
 
-        # TODO: check if new data is there
-        # TODO: send data to socket for data controller
-        # Example:
-        #     {
-        #         'exchange': self.name,
-        #         'market': 'BTC-XVG'
-        #         'tick': '5m'
-        #         'data': [
-        #             {
-        #                 'open': ...
-        #                 'close': ...
-        #                 'high': ...
-        #                 'low': ...
-        #                 'timestamp': ...
-        #             }
-        #         ]
-        #     }
+        d = {
+            'exchange': self.exchg,
+            'pair': self.pair,
+            'tick': self.tick,
+            'data': to_insert
+        }
 
-        while True:
-            try:
-                d = {
-                    'exchange': self.exchg,
-                    'pair': self.pair,
-                    'tick': self.tick,
-                    'data': to_insert
-                }
-                r = req.post('localhost', json=d)
-
-                if r.status_code is 200:
-                    break
-
-                logger.debug("issue sending data to tracker, waiting 10s before sending data again...")
-                time.sleep(10)
-
-            except ConnectionError:
-                continue
+        CON_REDIS.publish('tracker-data-channel', json.dumps(d))
 
         logger.info("finished processing %s at %s on %s" % (self.pair, self.exchg, self.tick))
         time.sleep(.5)
-
-    def run(self):
-        t1 = time.time()
-        self.doit()
-        t2 = time.time()
-        logger.debug("TIME of processing %s at %s on %s was %s sec" % (self.pair, self.exchg, self.tick, str(t2-t1)))
 
 
 #
@@ -182,27 +150,24 @@ class SendTickerData(threading.Thread):
 def recv_data(tick):
     thrds = []
 
-    # logger.info("getting related currencies from market summary")
-    # for pair in get_related_currencies():
-    #     if len(thrds) >= CONFIG["general"]["limit_threads_recv"]:
-    #         t = thrds[0]
-    #         t.join()
-    #         thrds.remove(t)
-    #
-    #         # for x in thrds:
-    #         #     x.join()
-    #         #     thrds.remove(x)
-    #
-    #     t = SendTickerData(pair, tick)
-    #     thrds.append(t)
-    #     t.start()
-    #
-    #     if not CONFIG["general"]["production"]:
-    #         return
-    #
-    # for x in thrds:
-    #     x.join()
-    #     thrds.remove(x)
+    logger.info("getting related currencies from market summary")
+    for pair in get_related_currencies():
+        if len(thrds) >= CONFIG["general"]["limit_threads_recv"]:
+            t = thrds[0]
+            t.join()
+            thrds.remove(t)
+
+        t = SendTickerData(pair, tick)
+        thrds.append(t)
+        t.start()
+
+        if not CONFIG["general"]["production"]:
+            t.join()
+            return
+
+    for x in thrds:
+        x.join()
+        thrds.remove(x)
 
     return True
 
@@ -227,6 +192,29 @@ if __name__ == "__main__":
         logger.info(">>> bittrex exchange not enabled, exiting... <<<")
         sys.exit(0)
 
+    logger.info("setup redis connection")
+    CON_REDIS = redis.StrictRedis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
+    # PUBSUB = CON_REDIS.pubsub(ignore_subscribe_messages=True)
+    PUBSUB = CON_REDIS.pubsub()
+    PUBSUB.subscribe('tracker-db-channel')
+
+    # logger.debug(CON_REDIS)
+    # logger.debug(PUBSUB)
+
+    # check if data tracker is ready for storing data
+    while True:
+        msg = PUBSUB.get_message()
+
+        # logger.debug("received msg type:" + str(type(msg)))
+        # logger.debug("received msg:" + str(msg))
+
+        if isinstance(msg, dict):
+            if msg['data'] == 'ready':
+                break
+
+        logger.info("tracker not yet ready, waiting another 10s...")
+        time.sleep(10)
+
     # development mode
     if not CONFIG["general"]["production"]:
         logger.info(">>> DEVELOPMENT MODE, NO SCHEDULING <<<")
@@ -235,29 +223,6 @@ if __name__ == "__main__":
 
     # production mode: set scheduling of executing receiver methods
     if CONFIG["general"]["production"]:
-        logger.info("setup redis connection")
-        CON_REDIS = redis.StrictRedis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
-        # PUBSUB = CON_REDIS.pubsub(ignore_subscribe_messages=True)
-        PUBSUB = CON_REDIS.pubsub()
-        PUBSUB.subscribe('tracker-db-channel')
-
-        # logger.debug(CON_REDIS)
-        # logger.debug(PUBSUB)
-
-        # check if data tracker is ready!!!
-        while True:
-            msg = PUBSUB.get_message()
-
-            # logger.debug("received msg type:" + str(type(msg)))
-            # logger.debug("received msg:" + str(msg))
-
-            if isinstance(msg, dict):
-                if msg['data'] == 'ready':
-                    break
-
-            logger.info("tracker not yet ready, waiting another 10s...")
-            time.sleep(10)
-
         # start receiver and scheduler
         logger.debug("tracker ready, starting bittrex receiver")
         scheduler = BackgroundScheduler(timezone=utc, job_defaults={

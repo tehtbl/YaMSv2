@@ -51,8 +51,8 @@ from django.db import models
 class Market(models.Model):
     # uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    exchange = models.CharField(max_length=255, verbose_name="Exchange")
-    pair = models.CharField(max_length=10, verbose_name="Pair")
+    exchange = models.CharField(db_index=True, max_length=255, verbose_name="Exchange")
+    pair = models.CharField(db_index=True, max_length=10, verbose_name="Pair")
 
     created = models.DateTimeField(auto_now_add=True)
     last_updated = models.DateTimeField(auto_now=True)
@@ -60,6 +60,7 @@ class Market(models.Model):
     class Meta:
         verbose_name = "Market"
         verbose_name_plural = verbose_name + "s"
+        unique_together = ('exchange', 'pair')
 
     def __str__(self):
         return u'%s --- %s' % (self.exchange, self.pair)
@@ -74,9 +75,9 @@ class Market(models.Model):
 class TickerData(models.Model):
     # uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    market = models.ForeignKey(Market, related_name="tickerdata_market")
-    tick_len = models.CharField(max_length=4, verbose_name="Tick Length")
-    time_val = models.DateTimeField(verbose_name="received_timeval")
+    market = models.ForeignKey(Market, related_name="tickerdata_market", db_index=True)
+    tick_len = models.CharField(db_index=True, max_length=4, verbose_name="Tick Length")
+    time_val = models.DateTimeField(db_index=True, verbose_name="received_timeval")
 
     open = models.PositiveIntegerField(default=0, verbose_name="open")
     high = models.PositiveIntegerField(default=0, verbose_name="high")
