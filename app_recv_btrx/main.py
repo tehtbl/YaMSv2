@@ -235,10 +235,10 @@ if __name__ == "__main__":
             recv_data(t)
 
         # wait some seconds until data is finished aggregating at bittrex-side
-        scheduler.add_job(recv_data, args=['5m'], trigger='cron', minute="*/5", second="7")
-        scheduler.add_job(recv_data, args=['30m'], trigger='cron', minute="*/30", second="13")
+        scheduler.add_job(recv_data, args=['5m'], trigger='cron', minute="*/5", second="17")
+        scheduler.add_job(recv_data, args=['30m'], trigger='cron', minute="*/30", second="31")
         scheduler.add_job(recv_data, args=['1h'], trigger='cron', hour="*/4", minute="2", second="21")
-        scheduler.add_job(recv_data, args=['1d'], trigger='cron', hour="0", minute="5", second="29")
+        scheduler.add_job(recv_data, args=['1d'], trigger='cron', hour="0", minute="5", second="39")
 
         # start the scheduler
         scheduler.start()
