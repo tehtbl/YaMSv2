@@ -16,6 +16,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import os
 import json
 import time
 import redis
@@ -24,7 +25,13 @@ import os.path
 import logging
 import datetime
 
-from libyams.utils import get_conf, ticks
+from libyams.utils import get_conf
+
+# bootstrap ORM
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
+django.setup()
+
+from libyams.orm.models import TickerData
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -44,36 +51,22 @@ if __name__ == "__main__":
         logger.setLevel(logging.DEBUG)
 
     # start
-    logger.info("setup redis connection")
+    logger.info("startup redis connection")
     CON_REDIS = redis.StrictRedis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
     CON_REDIS.config_set('client-output-buffer-limit', 'normal 0 0 0')
     CON_REDIS.config_set('client-output-buffer-limit', 'slave 0 0 0')
     CON_REDIS.config_set('client-output-buffer-limit', 'pubsub 0 0 0')
 
+    CON_REDIS.publish('tracker-db-channel', 'ready')
+
     PUBSUB = CON_REDIS.pubsub()
     PUBSUB.subscribe('tracker-data-channel')
 
-    # bootstrap ORM
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
-    django.setup()
-
-    from libyams.orm.models import TickerData
-    CON_REDIS.publish('tracker-db-channel', 'ready')
-
-    # # start up worker thread
-    # logger.info("start worker thread")
-    # t2 = WorkerThread()
-    # t2.start()
-
-    logger.debug("starting storage loop")
-    # check if data tracker is ready!!!
+    logger.info("starting storage loop")
     while True:
         msg = PUBSUB.get_message()
 
-        # logger.debug("received msg type:" + str(type(msg)))
-        # logger.debug("received msg:" + str(msg))
-
-        if isinstance(msg, dict) and msg['type'] == 'message':
+        if isinstance(msg, dict) and msg['type'] == 'message' and msg['channel'] == 'tracker-data-channel':
             itm = json.loads(msg['data'])
 
             if isinstance(itm, dict):
@@ -112,6 +105,13 @@ if __name__ == "__main__":
                     TickerData.objects.bulk_create([
                         TickerData(**i) for i in to_insert
                     ])
+                # TODO
+                # else:
+                #     CON_REDIS.publish('tracker-recv-pair', json.dumps({
+                #         'xchg': itm['xchg'],
+                #         'pair': itm['pair'],
+                #         'tick': itm['tick'],
+                #     }))
 
                 t2 = time.time()
                 logger.debug("TIME of saving %s at %s on %s was %s sec" % (itm['pair'], itm['xchg'], itm['tick'], str(t2 - t1)))

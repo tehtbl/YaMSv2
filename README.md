@@ -46,4 +46,15 @@ Just ask me in the Chat for a donation address :)
 
 # TODO
 - split getter und getter-controller to address also websockets data getting pushed
-- do normalizing of data stream in between controller to database
+- redis to own image:
+```
+redis_1          | 1:C 05 Nov 19:27:45.425 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+redis_1          | 1:C 05 Nov 19:27:45.426 # Redis version=4.0.2, bits=64, commit=00000000, modified=0, pid=1, just started
+redis_1          | 1:C 05 Nov 19:27:45.426 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+redis_1          | 1:M 05 Nov 19:27:45.426 * Running mode=standalone, port=6379.
+redis_1          | 1:M 05 Nov 19:27:45.427 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+redis_1          | 1:M 05 Nov 19:27:45.427 # Server initialized
+redis_1          | 1:M 05 Nov 19:27:45.428 # WARNING you have Transparent Huge Pages (THP) support enabled in your kernel. This will create latency and memory usage issues with Redis. To fix this issue run the command 'echo never > /sys/kernel/mm/transparent_hugepage/enabled' as root, and add it to your /etc/rc.local in order to retain the setting after a reboot. Redis must be restarted after THP is disabled.
+redis_1          | 1:M 05 Nov 19:27:45.429 * DB loaded from disk: 0.001 seconds
+redis_1          | 1:M 05 Nov 19:27:45.429 * Ready to accept connections
+```

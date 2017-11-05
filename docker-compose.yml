@@ -1,7 +1,7 @@
 version: "3"
 services:
   db:
-    image: 'postgres:9.5.3'
+    image: postgres:9.5.3
     ports:
       - "5432:5432"
     volumes:
@@ -10,11 +10,9 @@ services:
       POSTGRES_USER: 'pguser'
       POSTGRES_PASSWORD: 'supersecret'
       POSTGRES_DB: 'yamsdb'
-#    logging:
-#      driver: "none"
 
   redis:
-    image: redis:latest
+    image: redis:4.0.2-alpine
     ports:
       - "6379:6379"
     volumes:
@@ -24,7 +22,6 @@ services:
     build:
       context: .
       dockerfile: docker/app_tracker/Dockerfile
-#    command: "/usr/local/bin/python /tracker/main.py"
     command: "/bin/bash /tracker/start.sh"
     depends_on:
       - db
@@ -32,6 +29,7 @@ services:
     links:
       - db
       - redis
+    restart: always
 
   app_recv_btrx:
     build:

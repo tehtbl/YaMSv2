@@ -25,9 +25,7 @@ import logging
 import threading
 import requests as req
 
-
 from pytz import utc
-from requests import ConnectionError
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from libyams.utils import get_conf, ticks, get_btc_usd
@@ -199,7 +197,7 @@ if __name__ == "__main__":
     CON_REDIS = redis.StrictRedis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
     # PUBSUB = CON_REDIS.pubsub(ignore_subscribe_messages=True)
     PUBSUB = CON_REDIS.pubsub()
-    PUBSUB.subscribe('tracker-db-channel')
+    PUBSUB.subscribe('tracker-db-channel', 'tracker-recv-pair')
 
     # logger.debug(CON_REDIS)
     # logger.debug(PUBSUB)
@@ -212,7 +210,7 @@ if __name__ == "__main__":
         # logger.debug("received msg:" + str(msg))
 
         if isinstance(msg, dict):
-            if msg['data'] == 'ready':
+            if msg['data'] == 'ready' and msg['channel'] == 'tracker-db-channel':
                 break
 
         logger.info("tracker not yet ready, waiting another 10s...")
