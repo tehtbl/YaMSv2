@@ -58,3 +58,5 @@ redis_1          | 1:M 05 Nov 19:27:45.428 # WARNING you have Transparent Huge P
 redis_1          | 1:M 05 Nov 19:27:45.429 * DB loaded from disk: 0.001 seconds
 redis_1          | 1:M 05 Nov 19:27:45.429 * Ready to accept connections
 ```
+- db image: send message to redis, when db is finally loaded
+- monitoring!
