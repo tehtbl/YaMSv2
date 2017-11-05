@@ -20,6 +20,7 @@ import sys
 import json
 import redis
 import time
+import random
 import logging
 import threading
 import requests as req
@@ -105,12 +106,12 @@ class SendTickerData(threading.Thread):
         threading.Thread.__init__(self)
         self.pair = pair
         self.tick = tick
-        self.exchg = CONFIG["bittrex"]["short"]
+        self.xchg = CONFIG["bittrex"]["short"]
 
     def run(self):
         global CON_REDIS
 
-        logger.info("processing %s at %s on %s" % (self.pair, self.exchg, self.tick))
+        logger.info("processing %s at %s on %s" % (self.pair, self.xchg, self.tick))
 
         if self.tick not in ticks.keys():
             raise RuntimeError('unknown tick %s for bittrex' % self.tick)
@@ -122,17 +123,15 @@ class SendTickerData(threading.Thread):
         to_insert = []
         for d in data:
             to_insert.append({
-                'market': self.pair,
-                'tick_len': self.tick,
-                'time_val': d['T'],
-                'open': float(d['O']),
-                'high': float(d['H']),
-                'low': float(d['L']),
-                'close': float(d['C'])
+                'tval': d['T'],
+                'open': d['O'],
+                'high': d['H'],
+                'low': d['L'],
+                'close': d['C']
             })
 
         d = {
-            'exchange': self.exchg,
+            'xchg': self.xchg,
             'pair': self.pair,
             'tick': self.tick,
             'data': to_insert
@@ -140,7 +139,7 @@ class SendTickerData(threading.Thread):
 
         CON_REDIS.publish('tracker-data-channel', json.dumps(d))
 
-        logger.info("finished processing %s at %s on %s" % (self.pair, self.exchg, self.tick))
+        logger.debug("finished processing %s at %s on %s" % (self.pair, self.xchg, self.tick))
         time.sleep(.5)
 
 
@@ -150,8 +149,12 @@ class SendTickerData(threading.Thread):
 def recv_data(tick):
     thrds = []
 
+    curs = get_related_currencies()
+    if CONFIG["general"]["production"]:
+        random.shuffle(curs)
+
     logger.info("getting related currencies from market summary")
-    for pair in get_related_currencies():
+    for pair in curs:
         if len(thrds) >= CONFIG["general"]["limit_threads_recv"]:
             t = thrds[0]
             t.join()

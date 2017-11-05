@@ -45,28 +45,28 @@ from django.db import models
 # )
 
 
+# #
+# # Market
+# #
+# class Market(models.Model):
+#     # uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 #
-# Market
+#     exchange = models.CharField(db_index=True, max_length=255, verbose_name="Exchange")
+#     pair = models.CharField(db_index=True, max_length=10, verbose_name="Pair")
 #
-class Market(models.Model):
-    # uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-
-    exchange = models.CharField(db_index=True, max_length=255, verbose_name="Exchange")
-    pair = models.CharField(db_index=True, max_length=10, verbose_name="Pair")
-
-    created = models.DateTimeField(auto_now_add=True)
-    last_updated = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = "Market"
-        verbose_name_plural = verbose_name + "s"
-        unique_together = ('exchange', 'pair')
-
-    def __str__(self):
-        return u'%s --- %s' % (self.exchange, self.pair)
-
-    def __unicode__(self):
-        return self.__str__()
+#     created = models.DateTimeField(auto_now_add=True)
+#     last_updated = models.DateTimeField(auto_now=True)
+#
+#     class Meta:
+#         verbose_name = "Market"
+#         verbose_name_plural = verbose_name + "s"
+#         unique_together = ('exchange', 'pair')
+#
+#     def __str__(self):
+#         return u'%s --- %s' % (self.exchange, self.pair)
+#
+#     def __unicode__(self):
+#         return self.__str__()
 
 
 #
@@ -75,25 +75,29 @@ class Market(models.Model):
 class TickerData(models.Model):
     # uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    market = models.ForeignKey(Market, related_name="tickerdata_market", db_index=True)
-    tick_len = models.CharField(db_index=True, max_length=4, verbose_name="Tick Length")
-    time_val = models.DateTimeField(db_index=True, verbose_name="received_timeval")
+    # market = models.ForeignKey(Market, related_name="tickerdata_market", db_index=True)
+
+    xchg = models.CharField(db_index=True, max_length=255, verbose_name="Exchange")
+    pair = models.CharField(db_index=True, max_length=10, verbose_name="Pair")
+    tick = models.CharField(db_index=True, max_length=4, verbose_name="Tick Length")
+
+    tval = models.DateTimeField(db_index=True, verbose_name="received_timeval")
 
     open = models.PositiveIntegerField(default=0, verbose_name="open")
     high = models.PositiveIntegerField(default=0, verbose_name="high")
     low = models.PositiveIntegerField(default=0, verbose_name="low")
     close = models.PositiveIntegerField(default=0, verbose_name="close")
 
-    # created = models.DateTimeField(auto_now_add=True)
-    # last_updated = models.DateTimeField(auto_now=True)
+    created = models.DateTimeField(auto_now_add=True)
+    last_updated = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "TickerData"
         verbose_name_plural = verbose_name
-        unique_together = ('market', 'tick_len', 'time_val', 'open', 'high', 'low', 'close')
+        unique_together = ('xchg', 'pair', 'tick', 'tval', 'open', 'high', 'low', 'close')
 
     def __str__(self):
-        return u'market(%s), time(%s), close(%s)' % (self.market, self.time_val, self.close)
+        return u'exchange(%s), pair(%s), time(%s), close(%s)' % (self.xchg, self.pair, self.tval, self.close)
 
     def __unicode__(self):
         return self.__str__()
