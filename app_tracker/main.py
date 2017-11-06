@@ -74,8 +74,6 @@ if __name__ == "__main__":
                     logger.debug("data in wrong format, aborting...")
                     continue
 
-                logger.info("valid data (len: %s) from %s for %s at %s" % (len(itm['data']), itm['xchg'], itm['pair'], itm['tick']))
-
                 # logger.debug("itm type:" + str(type(itm)))
                 # logger.debug("itm:" + str(itm))
 
@@ -100,7 +98,8 @@ if __name__ == "__main__":
                             'close': d['close']
                         })
 
-                logger.debug("to insert: %s" % len(to_insert))
+                logger.info("valid data (%s|%s) from %s for %s at %s" % (len(itm['data']), len(to_insert), itm['xchg'], itm['pair'], itm['tick']))
+
                 if len(to_insert) > 0:
                     TickerData.objects.bulk_create([
                         TickerData(**i) for i in to_insert
