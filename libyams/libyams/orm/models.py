@@ -83,10 +83,10 @@ class TickerData(models.Model):
 
     tval = models.DateTimeField(db_index=True, verbose_name="received_timeval")
 
-    open = models.PositiveIntegerField(default=0, verbose_name="open")
-    high = models.PositiveIntegerField(default=0, verbose_name="high")
-    low = models.PositiveIntegerField(default=0, verbose_name="low")
-    close = models.PositiveIntegerField(default=0, verbose_name="close")
+    open = models.FloatField(default=0.0, verbose_name="open")
+    high = models.FloatField(default=0, verbose_name="high")
+    low = models.FloatField(default=0, verbose_name="low")
+    close = models.FloatField(default=0, verbose_name="close")
 
     created = models.DateTimeField(auto_now_add=True)
     last_updated = models.DateTimeField(auto_now=True)

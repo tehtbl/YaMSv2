@@ -40,6 +40,9 @@ CONFIG = get_conf()
 CON_REDIS = None
 PUBSUB = None
 
+
+# TickerData.objects.filter(xchg='btrx', pair='BTC-ADX', tick='30m')
+
 #
 # MAiN
 #
