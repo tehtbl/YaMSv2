@@ -41,18 +41,24 @@ services:
     links:
       - redis
 
-#  app_analyze:
-#    build:
-#      context: .
-#      dockerfile: docker/app_analyze/Dockerfile
+  app_analyze:
+    build:
+      context: .
+      dockerfile: docker/app_analyze/Dockerfile
+    command: "/bin/bash /analyzer/start.sh"
+    depends_on:
+      - redis
+      - app_tracker
+    links:
+      - redis
 #    depends_on:
 #      - elasticsearch
 #      - kibana
 #    links:
 #      - elasticsearch
 #      - db
-#    restart: always
-#
+
+
 #  elasticsearch:
 #    image: docker.elastic.co/elasticsearch/elasticsearch:5.5.0
 #    volumes:
