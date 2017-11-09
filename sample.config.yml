@@ -9,6 +9,9 @@ general:
   redis:
     host: redis
     port: 6379
+    chans:
+      comm: 'channel-comm'
+      data: 'channel-data'
 
 datatracker:
   exchanges:

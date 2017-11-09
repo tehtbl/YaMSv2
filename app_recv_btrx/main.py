@@ -135,7 +135,7 @@ class SendTickerData(threading.Thread):
             'data': to_insert
         }
 
-        CON_REDIS.publish('tracker-data-channel', json.dumps(d))
+        CON_REDIS.publish(CONFIG["general"]["redis"]["chans"]["data"], json.dumps(d))
 
         logger.debug("finished processing %s at %s on %s" % (self.pair, self.xchg, self.tick))
         time.sleep(.5)
@@ -197,7 +197,7 @@ if __name__ == "__main__":
     CON_REDIS = redis.StrictRedis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
     # PUBSUB = CON_REDIS.pubsub(ignore_subscribe_messages=True)
     PUBSUB = CON_REDIS.pubsub()
-    PUBSUB.subscribe('tracker-db-channel', 'tracker-recv-pair')
+    PUBSUB.subscribe(CONFIG["general"]["redis"]["chans"]["comm"])
 
     # logger.debug(CON_REDIS)
     # logger.debug(PUBSUB)
@@ -210,7 +210,7 @@ if __name__ == "__main__":
         # logger.debug("received msg:" + str(msg))
 
         if isinstance(msg, dict):
-            if msg['data'] == 'ready' and msg['channel'] == 'tracker-db-channel':
+            if msg['data'] == 'db-ready' and msg['channel'] == CONFIG["general"]["redis"]["chans"]["comm"]:
                 break
 
         logger.info("tracker not yet ready, waiting another 10s...")

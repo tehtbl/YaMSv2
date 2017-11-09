@@ -18,64 +18,13 @@
 
 from __future__ import unicode_literals
 
-import uuid as uuid
 from django.db import models
-
-# CH_Ticks = (
-#     ('1', '1m'),
-#     ('2', '5m'),
-#     ('3', '30'),
-#     ('4', '1h'),
-#     ('5', '4h'),
-#     ('6', '1d'),
-#     ('7', '1m'),
-# )
-#
-# CH_Signal = (
-#     ('1', 'none'),
-#     ('2', 'buy'),
-#     ('3', 'sell'),
-# )
-#time_val
-# CH_SignalStrength = (
-#     ('1', 'none'),
-#     ('2', 'weak'),
-#     ('3', 'normal'),
-#     ('4', 'strong'),
-# )
-
-
-# #
-# # Market
-# #
-# class Market(models.Model):
-#     # uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-#
-#     exchange = models.CharField(db_index=True, max_length=255, verbose_name="Exchange")
-#     pair = models.CharField(db_index=True, max_length=10, verbose_name="Pair")
-#
-#     created = models.DateTimeField(auto_now_add=True)
-#     last_updated = models.DateTimeField(auto_now=True)
-#
-#     class Meta:
-#         verbose_name = "Market"
-#         verbose_name_plural = verbose_name + "s"
-#         unique_together = ('exchange', 'pair')
-#
-#     def __str__(self):
-#         return u'%s --- %s' % (self.exchange, self.pair)
-#
-#     def __unicode__(self):
-#         return self.__str__()
 
 
 #
 # TickerData
 #
 class TickerData(models.Model):
-    # uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-
-    # market = models.ForeignKey(Market, related_name="tickerdata_market", db_index=True)
 
     xchg = models.CharField(db_index=True, max_length=255, verbose_name="Exchange")
     pair = models.CharField(db_index=True, max_length=10, verbose_name="Pair")
@@ -94,7 +43,7 @@ class TickerData(models.Model):
     class Meta:
         verbose_name = "TickerData"
         verbose_name_plural = verbose_name
-        unique_together = ('xchg', 'pair', 'tick', 'tval', 'open', 'high', 'low', 'close')
+        unique_together = ('xchg', 'pair', 'tick', 'tval')
 
     def __str__(self):
         return u'exchange(%s), pair(%s), time(%s), close(%s)' % (self.xchg, self.pair, self.tval, self.close)
@@ -107,13 +56,14 @@ class TickerData(models.Model):
 # Indicator
 #
 class Indicator(models.Model):
-    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    name = models.CharField(max_length=80, verbose_name="Indicator Name", db_index=True)
+    value = models.CharField(max_length=80, verbose_name="Indicator Value")
+
+    data = models.ForeignKey(TickerData, related_name="indicator_tickerdata", db_index=True)
 
     created = models.DateTimeField(auto_now_add=True)
     last_updated = models.DateTimeField(auto_now=True)
-
-    name = models.CharField(max_length=80, verbose_name="Indicator Name")
-    value = models.CharField(max_length=80, verbose_name="Indicator Name")
 
     class Meta:
         verbose_name = "Indicator"

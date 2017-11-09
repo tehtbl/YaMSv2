@@ -60,10 +60,11 @@ if __name__ == "__main__":
     CON_REDIS.config_set('client-output-buffer-limit', 'slave 0 0 0')
     CON_REDIS.config_set('client-output-buffer-limit', 'pubsub 0 0 0')
 
-    CON_REDIS.publish('tracker-db-channel', 'ready')
+    # CON_REDIS.publish('tracker-db-channel', 'ready')
+    CON_REDIS.publish(CONFIG["general"]["redis"]["chans"]["comm"], 'db-ready')
 
     PUBSUB = CON_REDIS.pubsub()
-    PUBSUB.subscribe('tracker-data-channel')
+    PUBSUB.subscribe(CONFIG["general"]["redis"]["chans"]["data"])
 
     logger.info("starting storage loop")
     while True:
