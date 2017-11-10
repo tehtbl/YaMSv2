@@ -22,6 +22,7 @@ import redis
 import time
 import random
 import logging
+import datetime
 import threading
 import requests as req
 
@@ -109,7 +110,7 @@ class SendTickerData(threading.Thread):
     def run(self):
         global CON_REDIS
 
-        logger.info("processing %s at %s on %s" % (self.pair, self.xchg, self.tick))
+        logger.info("receiving %s at %s on %s" % (self.pair, self.xchg, self.tick))
 
         if self.tick not in ticks.keys():
             raise RuntimeError('unknown tick %s for bittrex' % self.tick)
@@ -137,7 +138,7 @@ class SendTickerData(threading.Thread):
 
         CON_REDIS.publish(CONFIG["general"]["redis"]["chans"]["data"], json.dumps(d))
 
-        logger.debug("finished processing %s at %s on %s" % (self.pair, self.xchg, self.tick))
+        logger.debug("finished receiving %s at %s on %s" % (self.pair, self.xchg, self.tick))
         time.sleep(.5)
 
 
@@ -197,24 +198,31 @@ if __name__ == "__main__":
     CON_REDIS = redis.StrictRedis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
     # PUBSUB = CON_REDIS.pubsub(ignore_subscribe_messages=True)
     PUBSUB = CON_REDIS.pubsub()
-    PUBSUB.subscribe(CONFIG["general"]["redis"]["chans"]["comm"])
+    PUBSUB.subscribe(CONFIG["general"]["redis"]["chans"]["comm"],
+                     CONFIG["general"]["redis"]["chans"]["db_heartbeat"])
 
     # logger.debug(CON_REDIS)
     # logger.debug(PUBSUB)
 
     # check if data tracker is ready for storing data
+    CON_REDIS.publish(CONFIG["general"]["redis"]["chans"]["db_heartbeat_ctrl"], 'db_ready')
     while True:
         msg = PUBSUB.get_message()
 
-        # logger.debug("received msg type:" + str(type(msg)))
-        # logger.debug("received msg:" + str(msg))
+        logger.debug("received msg type:" + str(type(msg)))
+        logger.debug("received msg:" + str(msg))
 
-        if isinstance(msg, dict):
-            if msg['data'] == 'db-ready' and msg['channel'] == CONFIG["general"]["redis"]["chans"]["comm"]:
+        if isinstance(msg, dict) and msg['type'] == 'message' and msg['channel'] == CONFIG["general"]["redis"]["chans"]["db_heartbeat"]:
+            itm = json.loads(msg['data'])
+
+            logger.debug("db heartbeat info %s" % itm)
+
+            if itm['state'] and (int(time.time()) - int(itm['time'])) < 30:
                 break
 
-        logger.info("tracker not yet ready, waiting another 10s...")
-        time.sleep(10)
+        logger.info("tracker not yet ready, waiting another 5s...")
+        CON_REDIS.publish(CONFIG["general"]["redis"]["chans"]["db_heartbeat_ctrl"], 'db_ready')
+        time.sleep(5)
 
     # development mode
     if not CONFIG["general"]["production"]:

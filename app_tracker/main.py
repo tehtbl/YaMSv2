@@ -17,15 +17,19 @@
 #
 
 import os
+import sys
 import json
 import time
 import redis
 import django
+import socket
 import os.path
 import logging
 import datetime
+import threading
 
 from libyams.utils import get_conf
+from django.core.management import execute_from_command_line
 
 # bootstrap ORM
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "libyams.settings")
@@ -37,11 +41,132 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(leve
 logger = logging.getLogger(__name__)
 
 CONFIG = get_conf()
-CON_REDIS = None
-PUBSUB = None
+DB = {
+    'accessible': False,
+    'initialized': False
+}
 
 
-# TickerData.objects.filter(xchg='btrx', pair='BTC-ADX', tick='30m')
+#
+# checks if db is available
+#
+def check_db():
+    global CONFIG
+
+    try:
+        s = socket.create_connection((CONFIG["general"]["database"]["host"], CONFIG["general"]["database"]["port"]), 5)
+        s.close()
+        return True
+    except Exception:
+        return False
+
+
+#
+# save data to database
+#
+def save_to_db(itm):
+    # logger.debug("itm type:" + str(type(itm)))
+    # logger.debug("itm:" + str(itm))
+
+    t1 = time.time()
+    to_insert = []
+    t_value = map(lambda x: x['tval'], TickerData.objects.filter(xchg=itm['xchg'], pair=itm['pair'], tick=itm['tick']).values('tval'))
+
+    for d in itm['data']:
+        tval = datetime.datetime.strptime(d['tval'], '%Y-%m-%dT%H:%M:%S')
+        # logger.debug(tval)
+        if tval not in t_value:
+            to_insert.append({
+                'xchg': itm['xchg'],
+                'pair': itm['pair'],
+                'tick': itm['tick'],
+
+                'tval': d['tval'],
+
+                'open': d['open'],
+                'high': d['high'],
+                'low': d['low'],
+                'close': d['close']
+            })
+
+    logger.info("valid data (%s|%s) from %s for %s at %s" % (len(itm['data']), len(to_insert), itm['xchg'], itm['pair'], itm['tick']))
+
+    if len(to_insert) > 0:
+        TickerData.objects.bulk_create([
+            TickerData(**i) for i in to_insert
+        ])
+    # TODO
+    # else:
+    #     CON_REDIS.publish('tracker-recv-pair', json.dumps({
+    #         'xchg': itm['xchg'],
+    #         'pair': itm['pair'],
+    #         'tick': itm['tick'],
+    #     }))
+
+    t2 = time.time()
+    logger.debug("TIME of saving %s at %s on %s was %s sec" % (itm['pair'], itm['xchg'], itm['tick'], str(t2 - t1)))
+
+    return
+
+
+#
+# worker thread for analysis
+#
+class WorkerThread(threading.Thread):
+    def __init__(self, redis_con):
+        threading.Thread.__init__(self)
+        self.redis_con = redis_con
+        self.redis_pubsub = redis_con.pubsub()
+        self.runner = True
+
+    def run(self):
+        global CONFIG
+        global DB
+
+        self.redis_pubsub.subscribe(CONFIG["general"]["redis"]["chans"]["db_heartbeat_ctrl"],
+                                    CONFIG["general"]["redis"]["chans"]["data"])
+
+        while self.runner:
+            msg = self.redis_pubsub.get_message()
+
+            # logger.debug(msg)
+
+            if not DB['accessible']:
+                DB['accessible'] = check_db()
+
+            if DB['accessible'] and not DB['initialized']:
+                time.sleep(1)
+                execute_from_command_line([sys.argv[0], 'makemigrations'])
+                execute_from_command_line([sys.argv[0], 'migrate'])
+
+                DB['initialized'] = True
+
+            if isinstance(msg, dict) and msg['type'] == 'message':
+                if msg['channel'] == CONFIG["general"]["redis"]["chans"]["db_heartbeat_ctrl"]:
+                    itm = msg['data']
+
+                    logger.debug(itm)
+
+                    if itm == 'db_ready':
+                        self.redis_con.publish(CONFIG["general"]["redis"]["chans"]["db_heartbeat"], json.dumps({
+                            'state': DB['initialized'],
+                            'time': int(time.time())
+                        }))
+
+                if msg['channel'] == CONFIG["general"]["redis"]["chans"]["data"]:
+                    itm = json.loads(msg['data'])
+
+                    if "xchg" not in itm.keys() or "pair" not in itm.keys() or "tick" not in itm.keys() or "data" not in itm.keys():
+                        logger.debug("data in wrong format, aborting...")
+                        continue
+
+                    save_to_db(itm)
+
+                    if not CONFIG["general"]["production"]:
+                        self.runner = False
+
+            time.sleep(.5)
+
 
 #
 # MAiN
@@ -54,73 +179,13 @@ if __name__ == "__main__":
         logger.setLevel(logging.DEBUG)
 
     # start
-    logger.info("startup redis connection")
-    CON_REDIS = redis.StrictRedis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
-    CON_REDIS.config_set('client-output-buffer-limit', 'normal 0 0 0')
-    CON_REDIS.config_set('client-output-buffer-limit', 'slave 0 0 0')
-    CON_REDIS.config_set('client-output-buffer-limit', 'pubsub 0 0 0')
+    logger.debug("startup redis connection")
+    rcon = redis.StrictRedis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
+    rcon.config_set('client-output-buffer-limit', 'normal 0 0 0')
+    rcon.config_set('client-output-buffer-limit', 'slave 0 0 0')
+    rcon.config_set('client-output-buffer-limit', 'pubsub 0 0 0')
 
-    # CON_REDIS.publish('tracker-db-channel', 'ready')
-    CON_REDIS.publish(CONFIG["general"]["redis"]["chans"]["comm"], 'db-ready')
-
-    PUBSUB = CON_REDIS.pubsub()
-    PUBSUB.subscribe(CONFIG["general"]["redis"]["chans"]["data"])
-
-    logger.info("starting storage loop")
-    while True:
-        msg = PUBSUB.get_message()
-
-        if isinstance(msg, dict) and msg['type'] == 'message' and msg['channel'] == CONFIG["general"]["redis"]["chans"]["data"]:
-            itm = json.loads(msg['data'])
-
-            if isinstance(itm, dict):
-                if "xchg" not in itm.keys() or "pair" not in itm.keys() or "tick" not in itm.keys() or "data" not in itm.keys():
-                    logger.debug("data in wrong format, aborting...")
-                    continue
-
-                # logger.debug("itm type:" + str(type(itm)))
-                # logger.debug("itm:" + str(itm))
-
-                t1 = time.time()
-                to_insert = []
-                t_value = map(lambda x: x['tval'], TickerData.objects.filter(xchg=itm['xchg'], pair=itm['pair'], tick=itm['tick']).values('tval'))
-                # logger.debug("t_value %s" % t_value)
-                for d in itm['data']:
-                    tval = datetime.datetime.strptime(d['tval'], '%Y-%m-%dT%H:%M:%S')
-                    # logger.debug(tval)
-                    if tval not in t_value:
-                        to_insert.append({
-                            'xchg': itm['xchg'],
-                            'pair': itm['pair'],
-                            'tick': itm['tick'],
-
-                            'tval': d['tval'],
-
-                            'open': d['open'],
-                            'high': d['high'],
-                            'low': d['low'],
-                            'close': d['close']
-                        })
-
-                logger.info("valid data (%s|%s) from %s for %s at %s" % (len(itm['data']), len(to_insert), itm['xchg'], itm['pair'], itm['tick']))
-
-                if len(to_insert) > 0:
-                    TickerData.objects.bulk_create([
-                        TickerData(**i) for i in to_insert
-                    ])
-                # TODO
-                # else:
-                #     CON_REDIS.publish('tracker-recv-pair', json.dumps({
-                #         'xchg': itm['xchg'],
-                #         'pair': itm['pair'],
-                #         'tick': itm['tick'],
-                #     }))
-
-                t2 = time.time()
-                logger.debug("TIME of saving %s at %s on %s was %s sec" % (itm['pair'], itm['xchg'], itm['tick'], str(t2 - t1)))
-
-                if not CONFIG["general"]["production"]:
-                    break
-
-        time.sleep(.01)
-        # time.sleep(5)
+    logger.info("start WorkerThread()")
+    wt = WorkerThread(rcon)
+    wt.start()
+    time.sleep(.5)

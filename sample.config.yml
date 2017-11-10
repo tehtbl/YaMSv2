@@ -10,8 +10,14 @@ general:
     host: redis
     port: 6379
     chans:
+      db_heartbeat: 'channel-db-hb'
+      db_heartbeat_ctrl: 'channel-db-hb-ctrl'
       comm: 'channel-comm'
       data: 'channel-data'
+
+  database:
+    host: db
+    port: 5432
 
 datatracker:
   exchanges:

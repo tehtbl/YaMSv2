@@ -25,29 +25,29 @@ services:
       POSTGRES_PASSWORD: 'supersecret'
       POSTGRES_DB: 'yamsdb'
 
-#  app_tracker:
-#    build:
-#      context: .
-#      dockerfile: docker/app_tracker/Dockerfile
+  app_tracker:
+    build:
+      context: .
+      dockerfile: docker/app_tracker/Dockerfile
 #    command: "/bin/bash /tracker/start.sh"
-#    depends_on:
-#      - db
-#      - redis
-#    links:
-#      - db
-#      - redis
-#    restart: always
-#
-#  app_recv_btrx:
-#    build:
-#      context: .
-#      dockerfile: docker/app_recv_btrx/Dockerfile
-#    command: "/bin/bash /recv_btrx/start.sh"
-#    depends_on:
-#      - redis
-#    links:
-#      - redis
-#
+    command: "/usr/local/bin/python /tracker/main.py"
+    depends_on:
+      - db
+      - redis
+    links:
+      - db
+      - redis
+
+  app_recv_btrx:
+    build:
+      context: .
+      dockerfile: docker/app_recv_btrx/Dockerfile
+    command: "/bin/bash /recv_btrx/start.sh"
+    depends_on:
+      - redis
+    links:
+      - redis
+
 #  app_analyze:
 #    build:
 #      context: .
