@@ -39,11 +39,12 @@ bittrex:
   max_price_usd: 1
   blacklist:
     - XVG
-  analysis:
-    plugins:
-      - 00_cci14
-      - 01_strat1
-      - 02_strat2
+
+#  analysis:
+#    plugins:
+#      - 00_cci14
+#      - 01_strat1
+#      - 02_strat2
 
 
 #
