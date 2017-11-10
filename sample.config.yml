@@ -14,6 +14,7 @@ general:
       db_heartbeat_ctrl: 'channel-db-hb-ctrl'
       comm: 'channel-comm'
       data: 'channel-data'
+      analyzer: 'channel-analyzer'
 
   database:
     host: db

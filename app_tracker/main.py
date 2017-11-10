@@ -95,7 +95,7 @@ def save_to_db(itm):
         TickerData.objects.bulk_create([
             TickerData(**i) for i in to_insert
         ])
-    # TODO
+    # TODO ?!
     # else:
     #     CON_REDIS.publish('tracker-recv-pair', json.dumps({
     #         'xchg': itm['xchg'],
@@ -161,6 +161,11 @@ class WorkerThread(threading.Thread):
                         continue
 
                     save_to_db(itm)
+
+                    self.redis_con.publish(CONFIG["general"]["redis"]["chans"]["analyzer"], json.dumps({
+                        'item_data': itm,
+                        'time': int(time.time())
+                    }))
 
                     if not CONFIG["general"]["production"]:
                         self.runner = False

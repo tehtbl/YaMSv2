@@ -115,8 +115,8 @@ class SendTickerData(threading.Thread):
         if self.tick not in ticks.keys():
             raise RuntimeError('unknown tick %s for bittrex' % self.tick)
 
-        # data = get_ticker_data(self.pair, CONFIG["bittrex"]["tickers"][self.tick])[:3]
-        data = get_ticker_data(self.pair, CONFIG["bittrex"]["tickers"][self.tick])
+        data = get_ticker_data(self.pair, CONFIG["bittrex"]["tickers"][self.tick])[:3]
+        # data = get_ticker_data(self.pair, CONFIG["bittrex"]["tickers"][self.tick])
 
         # transform data for later storing in db
         to_insert = []
@@ -209,8 +209,8 @@ if __name__ == "__main__":
     while True:
         msg = PUBSUB.get_message()
 
-        logger.debug("received msg type:" + str(type(msg)))
-        logger.debug("received msg:" + str(msg))
+        # logger.debug("received msg type:" + str(type(msg)))
+        # logger.debug("received msg:" + str(msg))
 
         if isinstance(msg, dict) and msg['type'] == 'message' and msg['channel'] == CONFIG["general"]["redis"]["chans"]["db_heartbeat"]:
             itm = json.loads(msg['data'])

@@ -17,15 +17,19 @@
 #
 
 import os
+import sys
 import json
 import time
 import redis
 import django
+import socket
 import os.path
 import logging
 import datetime
+import threading
 
 from libyams.utils import get_conf
+from django.core.management import execute_from_command_line
 
 # bootstrap ORM
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "libyams.settings")
@@ -37,8 +41,43 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(leve
 logger = logging.getLogger(__name__)
 
 CONFIG = get_conf()
-CON_REDIS = None
-PUBSUB = None
+
+
+#
+# worker thread for analysis
+#
+class WorkerThread(threading.Thread):
+    def __init__(self, redis_con):
+        threading.Thread.__init__(self)
+        self.redis_con = redis_con
+        self.redis_pubsub = redis_con.pubsub()
+        self.runner = True
+
+    def run(self):
+        global CONFIG
+        global DB
+
+        self.redis_pubsub.subscribe(CONFIG["general"]["redis"]["chans"]["analyzer"])
+
+        while self.runner:
+            msg = self.redis_pubsub.get_message()
+
+            # logger.debug(msg)
+
+            if isinstance(msg, dict) and msg['type'] == 'message':
+                if msg['channel'] == CONFIG["general"]["redis"]["chans"]["analyzer"]:
+                    itm = json.loads(msg['data'])['item_data']
+
+                    if "xchg" not in itm.keys() or "pair" not in itm.keys() or "tick" not in itm.keys() or "data" not in itm.keys():
+                        logger.debug("data in wrong format, aborting...")
+                        continue
+
+                    logger.debug(itm)
+
+                    if not CONFIG["general"]["production"]:
+                        self.runner = False
+
+            time.sleep(.5)
 
 
 #
@@ -52,67 +91,10 @@ if __name__ == "__main__":
         logger.setLevel(logging.DEBUG)
 
     # start
-    logger.info("startup redis connection")
-    CON_REDIS = redis.StrictRedis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
-    PUBSUB = CON_REDIS.pubsub()
-    PUBSUB.subscribe(CONFIG["general"]["redis"]["chans"]["data"])
+    logger.debug("startup redis connection")
+    rcon = redis.StrictRedis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
 
-    logger.info("starting analyzing loop")
-    while True:
-        msg = PUBSUB.get_message()
-
-        if isinstance(msg, dict) and msg['type'] == 'message' and msg['channel'] == CONFIG["general"]["redis"]["chans"]["data"]:
-            itm = json.loads(msg['data'])
-
-            if isinstance(itm, dict):
-                if "xchg" not in itm.keys() or "pair" not in itm.keys() or "tick" not in itm.keys() or "data" not in itm.keys():
-                    logger.debug("data in wrong format, aborting...")
-                    continue
-
-                # logger.debug("itm type:" + str(type(itm)))
-                # logger.debug("itm:" + str(itm))
-
-                t1 = time.time()
-                to_insert = []
-                t_value = map(lambda x: x['tval'], TickerData.objects.filter(xchg=itm['xchg'], pair=itm['pair'], tick=itm['tick']).values('tval'))
-                # logger.debug("t_value %s" % t_value)
-                for d in itm['data']:
-                    tval = datetime.datetime.strptime(d['tval'], '%Y-%m-%dT%H:%M:%S')
-                    # logger.debug(tval)
-                    if tval not in t_value:
-                        to_insert.append({
-                            'xchg': itm['xchg'],
-                            'pair': itm['pair'],
-                            'tick': itm['tick'],
-
-                            'tval': d['tval'],
-
-                            'open': d['open'],
-                            'high': d['high'],
-                            'low': d['low'],
-                            'close': d['close']
-                        })
-
-                logger.info("valid data (%s|%s) from %s for %s at %s" % (len(itm['data']), len(to_insert), itm['xchg'], itm['pair'], itm['tick']))
-
-                if len(to_insert) > 0:
-                    pass
-                #     TickerData.objects.bulk_create([
-                #         TickerData(**i) for i in to_insert
-                #     ])
-                # # TODO
-                # # else:
-                # #     CON_REDIS.publish('tracker-recv-pair', json.dumps({
-                # #         'xchg': itm['xchg'],
-                # #         'pair': itm['pair'],
-                # #         'tick': itm['tick'],
-                # #     }))
-
-                t2 = time.time()
-                logger.debug("TIME of saving %s at %s on %s was %s sec" % (itm['pair'], itm['xchg'], itm['tick'], str(t2 - t1)))
-
-                if not CONFIG["general"]["production"]:
-                    break
-
-        time.sleep(.01)
-        # time.sleep(5)
+    logger.info("start WorkerThread()")
+    wt = WorkerThread(rcon)
+    wt.start()
+    time.sleep(.5)
