@@ -161,6 +161,7 @@ class WorkerThread(threading.Thread):
                         continue
 
                     save_to_db(itm)
+                    itm['data'] = [] # remove data as we get them from db directly
 
                     self.redis_con.publish(CONFIG["general"]["redis"]["chans"]["analyzer"], json.dumps({
                         'item_data': itm,

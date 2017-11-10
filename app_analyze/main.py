@@ -44,21 +44,10 @@ plugins = {}
 
 
 #
-# update labels, for bittrex-data!
-#
-def parse_ticker_dataframe(data):
-    df = DataFrame(data) \
-        .drop('BV', 1) \
-        .rename(columns={'C': 'close', 'V': 'volume', 'O': 'open', 'H': 'high', 'L': 'low', 'T': 'date'}) \
-        .sort_values('date')
-
-    return df
-
-#
 # populate indicators to dataframe
 #
 @synchronized
-def populate_indicators_and_buy_signal(dataframe):
+def populate_indicators(dataframe):
 
     dataframe['cci14'] = ta.CCI(dataframe, 14)
     dataframe['ema20'] = ta.EMA(dataframe, timeperiod=20)
@@ -197,12 +186,21 @@ class WorkerThread(threading.Thread):
                         continue
 
                     # app_analyze_1    | 2017-11-10 14:08:34,298 - __main__ - DEBUG - {u'xchg': u'btrx', u'pair': u'BTC-1ST', u'tick': u'5m', u'data': [{u'high': 4.277e-05, u'close': 4.277e-05, u'open': 4.25e-05, u'tval': u'2017-10-21T20:10:00', u'low': 4.25e-05}, {u'high': 4.277e-05, u'close': 4.277e-05, u'open': 4.239e-05, u'tval': u'2017-10-21T20:15:00', u'low': 4.239e-05}, {u'high': 4.277e-05, u'close': 4.277e-05, u'open': 4.277e-05, u'tval': u'2017-10-21T20:20:00', u'low': 4.277e-05}]}
+                    # logger.debug(itm)
+                    # logger.debug(itm['data'])
+                    # logger.debug(TickerData.objects.all())
 
-                    logger.debug(itm)
-                    logger.debug(itm['data'])
-                    logger.debug(TickerData.objects.all())
+                    logger.debug("analyzing %s at %s on %s" % (itm['pair'], itm['xchg'], itm['tick']))
 
-                    logger.info("analyzing data")
+                    if itm['xchg'] == CONFIG['bittrex']['short']:
+                        t1 = time.time()
+                        df = populate_indicators(DataFrame(list(TickerData.objects.all().values())))
+                        t2 = time.time()
+                        logger.debug("TIME of populating indicators for %s at %s on %s was %s sec" % (itm['pair'], itm['xchg'], itm['tick'], str(t2 - t1)))
+
+                        # logger.debug(df)
+
+                    logger.debug("finished analyzing %s at %s on %s" % (itm['pair'], itm['xchg'], itm['tick']))
 
                     if not CONFIG["general"]["production"]:
                         self.runner = False

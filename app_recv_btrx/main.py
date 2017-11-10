@@ -115,8 +115,8 @@ class SendTickerData(threading.Thread):
         if self.tick not in ticks.keys():
             raise RuntimeError('unknown tick %s for bittrex' % self.tick)
 
-        data = get_ticker_data(self.pair, CONFIG["bittrex"]["tickers"][self.tick])[:3]
-        # data = get_ticker_data(self.pair, CONFIG["bittrex"]["tickers"][self.tick])
+        # data = get_ticker_data(self.pair, CONFIG["bittrex"]["tickers"][self.tick])[:3]
+        data = get_ticker_data(self.pair, CONFIG["bittrex"]["tickers"][self.tick])
 
         # transform data for later storing in db
         to_insert = []
