@@ -48,22 +48,23 @@ services:
     links:
       - redis
 
-#  app_analyze:
-#    build:
-#      context: .
-#      dockerfile: docker/app_analyze/Dockerfile
-#    command: "/bin/bash /analyzer/start.sh"
+  app_analyze:
+    build:
+      context: .
+      dockerfile: docker/app_analyze/Dockerfile
+    command: "/bin/bash /analyzer/start.sh"
+    depends_on:
+      - redis
+      - app_tracker
+    links:
+      - redis
+
 #    depends_on:
-#      - redis
-#      - app_tracker
+#      - elasticsearch
+#      - kibana
 #    links:
-#      - redis
-##    depends_on:
-##      - elasticsearch
-##      - kibana
-##    links:
-##      - elasticsearch
-##      - db
+#      - elasticsearch
+#      - db
 
 
 #  elasticsearch:
