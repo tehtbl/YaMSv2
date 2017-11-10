@@ -1,16 +1,6 @@
+---
 version: "3"
 services:
-  db:
-    image: postgres:9.5.3
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./data/pgdata:/var/lib/postgresql/data/
-    environment:
-      POSTGRES_USER: 'pguser'
-      POSTGRES_PASSWORD: 'supersecret'
-      POSTGRES_DB: 'yamsdb'
-
   redis:
     image: redis:4.0.2-alpine
     ports:
@@ -18,45 +8,62 @@ services:
     volumes:
       - ./data/redisdata:/data
 
-  app_tracker:
+  db:
     build:
       context: .
-      dockerfile: docker/app_tracker/Dockerfile
-    command: "/bin/bash /tracker/start.sh"
+      dockerfile: docker/db/Dockerfile
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/pgdata:/var/lib/postgresql/data/
     depends_on:
-      - db
       - redis
     links:
-      - db
       - redis
-    restart: always
+    environment:
+      POSTGRES_USER: 'pguser'
+      POSTGRES_PASSWORD: 'supersecret'
+      POSTGRES_DB: 'yamsdb'
 
-  app_recv_btrx:
-    build:
-      context: .
-      dockerfile: docker/app_recv_btrx/Dockerfile
-    command: "/bin/bash /recv_btrx/start.sh"
-    depends_on:
-      - redis
-    links:
-      - redis
-
-  app_analyze:
-    build:
-      context: .
-      dockerfile: docker/app_analyze/Dockerfile
-    command: "/bin/bash /analyzer/start.sh"
-    depends_on:
-      - redis
-      - app_tracker
-    links:
-      - redis
+#  app_tracker:
+#    build:
+#      context: .
+#      dockerfile: docker/app_tracker/Dockerfile
+#    command: "/bin/bash /tracker/start.sh"
 #    depends_on:
-#      - elasticsearch
-#      - kibana
-#    links:
-#      - elasticsearch
 #      - db
+#      - redis
+#    links:
+#      - db
+#      - redis
+#    restart: always
+#
+#  app_recv_btrx:
+#    build:
+#      context: .
+#      dockerfile: docker/app_recv_btrx/Dockerfile
+#    command: "/bin/bash /recv_btrx/start.sh"
+#    depends_on:
+#      - redis
+#    links:
+#      - redis
+#
+#  app_analyze:
+#    build:
+#      context: .
+#      dockerfile: docker/app_analyze/Dockerfile
+#    command: "/bin/bash /analyzer/start.sh"
+#    depends_on:
+#      - redis
+#      - app_tracker
+#    links:
+#      - redis
+##    depends_on:
+##      - elasticsearch
+##      - kibana
+##    links:
+##      - elasticsearch
+##      - db
 
 
 #  elasticsearch:
