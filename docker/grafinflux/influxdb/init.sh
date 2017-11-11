@@ -16,7 +16,9 @@ fi
 
 # wait for influxdb to respond to requests
 until /usr/bin/influx -execute 'show databases'; do sleep 1; done
-/usr/bin/influx -execute 'create database inforad'
+
+/usr/bin/influx -execute 'create database cryptodb'
+/usr/bin/influx -execute 'show databases';
 
 /etc/init.d/influxdb stop
 
