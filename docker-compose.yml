@@ -56,16 +56,21 @@ services:
     depends_on:
       - redis
       - app_tracker
+      - grafinflux
     links:
       - redis
+      - grafinflux
 
-#    depends_on:
-#      - elasticsearch
-#      - kibana
-#    links:
-#      - elasticsearch
-#      - db
-
+  grafinflux:
+    build:
+      context: .
+      dockerfile: docker/grafinflux/Dockerfile
+    command: "/usr/bin/supervisord -c /etc/supervisord.d/supervisord.conf"
+    ports:
+      - "80:80"
+    volumes:
+      - ./data/grafinflux/influxdb:/var/lib/influxdb
+      - ./data/grafinflux/var_log_supervisor:/var/log/supervisor
 
 #  elasticsearch:
 #    image: docker.elastic.co/elasticsearch/elasticsearch:5.5.0
@@ -88,59 +93,3 @@ services:
 #    links:
 #      - elasticsearch
 #    restart: always
-
-#  influxdb:
-#    image: influxdb:1.0.2
-#    ports:
-#      - "8083:8083"
-#      - "8086:8086"
-#      - "25826:25826/udp"
-#    volumes:
-#      - /var/lib/influxdb:/var/lib/influxdb
-#      - /usr/share/collectd:/usr/share/collectd
-#    environment:
-#      INFLUXDB_COLLECTD_ENABLED: "true"
-#      INFLUXDB_COLLECTD_BIND_ADDRESS: ":25826"
-#      INFLUXDB_COLLECTD_DATABASE: "collectddb"
-#      INFLUXDB_COLLECTD_TYPESDB: "/usr/share/collectd/types.db"
-#      INFLUXDB_COLLECTD_BATCH_SIZE: 5000
-#      INFLUXDB_COLLECTD_BATCH_PENDING: 10
-#      INFLUXDB_COLLECTD_BATCH_TIMEOUT: "10s"
-#      INFLUXDB_COLLECTD_READ_BUFFER: 0
-#
-#  grafana:
-#    image: grafana/grafana:3.1.1-1470047149
-#    ports:
-#      - 3000:3000
-#    volumes:
-#      - /var/lib/grafana:/var/lib/grafana
-#    environment:
-#      GF_USERS_ALLOW_SIGN_UP: "false"
-
-#   grafana:
-#    image: grafana/grafana:2.6.0
-#    restart: always
-#    links:
-#      - influxdb:influxsrv
-#    ports:
-#      - "3000:3000"
-#    environment:
-#      - HTTP_USER=admin
-#      - HTTP_PASS=admin
-#      - INFLUXDB_HOST=influxsrv
-#      - INFLUXDB_PORT=8086
-#      - INFLUXDB_NAME=cadvisor
-#      - INFLUXDB_USER=root
-#      - INFLUXDB_PASS=root
-#
-#  influxdb:
-#    image: tutum/influxdb:0.9
-#    restart: always
-#    environment:
-#      - PRE_CREATE_DB=cadvisor
-#    ports:
-#      - "8083:8083"
-#      - "8086:8086"
-#    expose:
-#      - "8090"
-#      - "8099"

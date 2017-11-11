@@ -69,91 +69,14 @@ def populate_indicators(dataframe):
 
 
 #
-# analysis thread
+# save data to influxdb
 #
-class CalcIndicators(threading.Thread):
-    def __init__(self, pair, fn, tick):
-        threading.Thread.__init__(self)
-        self.pair = pair
-        self.fn = fn
-        self.tick = tick
-        self.name = "-CalcIndicators-%s_%s" % (self.pair, self.tick)
-
-    def run(self):
-        logger.debug("analyzing %s at %s" % (self.fn, self.tick))
+def save_to_influxdb(data):
+    # duplicates will be overwritten:
+    # https://docs.influxdata.com/influxdb/v1.3/troubleshooting/frequently-asked-questions/#how-does-influxdb-handle-duplicate-points
 
 
-        # TODO
-
-        # calc all indicators for tickdata object, instantiate an indicator object with all indicators
-
-
-
-        # # TODO: still needed/wanted?!
-        # #
-        # # check for last price drop
-        # #
-        # if self.tick == "FiveMin":
-        #     dataframe = parse_ticker_dataframe(data)
-        #     latest = dataframe.iloc[-1]
-        #
-        #     old_val = float(dataframe.iloc[-2]['close'])
-        #     new_val = float(dataframe.iloc[-1]['close'])
-        #     diff = float(((old_val - new_val) / old_val) * -100)
-        #
-        #     if abs(diff) > 10 and diff < 0:
-        #         tdiff = arrow.utcnow() - arrow.get(latest['date'])
-        #         msg = msg_price_chg % ( self.pair, diff, tdiff,
-        #
-        #                                 old_val, new_val,
-        #
-        #                                 self.pair
-        #                             )
-        #
-        #         logger.info(msg)
-        # else:
-        #
-        # check for signals from plugins
-        #
-        for p in plugins[self.tick]:
-            logger.debug("analysing with plugin: %s" % (p['name']))
-
-            plugin_exec = imp.load_module(p['name'], *p["info"])
-            dataframe, info = plugin_exec.populate_indicators_and_buy_signal(parse_ticker_dataframe(data))
-
-            # print info
-
-            signal = False
-            latest = dataframe.iloc[-1]
-
-            if latest['buy'] == 1:
-                signal = True
-
-            logger.info('buy_trigger: %s (pair=%s, tick=%s, strat=%s, signal=%s)', latest['date'], self.pair, self.tick, p['name'], signal)
-            # logger.debug(latest)
-
-            if signal:
-                threePercent = latest['close'] + ((latest['close']/100) * 3)
-                fivePercent = latest['close'] + ((latest['close']/100) * 5)
-                tenPercent = latest['close'] + ((latest['close']/100) * 10)
-
-                msg = msg_buysignal % ( self.pair,
-
-                                        latest['close'],
-                                        threePercent,
-                                        fivePercent,
-                                        tenPercent,
-
-                                        self.tick,
-                                        info,
-
-                                        self.pair
-                                    )
-
-                logger.info(msg)
-
-        logger.debug("finished analyzing %s at %s" % (self.fn, self.tick))
-        time.sleep(.5)
+    pass
 
 
 #
