@@ -8,3 +8,4 @@ redis==2.10.6
 numpy==1.13.1
 pandas==0.20.3
 TA-Lib==0.4.10
+influxdb==4.1.1

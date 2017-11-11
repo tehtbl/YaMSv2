@@ -23,8 +23,8 @@ curl 'http://admin:admin@localhost:3000/api/datasources' \
         "access":"proxy",
         "isDefault":true,
         "database":"cryptodb",
-        "user":"n/a",
-        "password":"n/a"
+        "user":"adm",
+        "password":"adm"
       }'
 DATASOURCE
 echo

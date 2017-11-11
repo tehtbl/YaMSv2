@@ -17,8 +17,15 @@ fi
 # wait for influxdb to respond to requests
 until /usr/bin/influx -execute 'show databases'; do sleep 1; done
 
-/usr/bin/influx -execute 'create database cryptodb'
-/usr/bin/influx -execute 'show databases';
+/usr/bin/influx -execute 'CREATE DATABASE "cryptodb"'
+/usr/bin/influx -execute 'SHOW DATABASES';
+#/usr/bin/influx -execute 'USE DATABASE "cryptodb"; CREATE USER "adm" WITH PASSWORD "adm"';
+#/usr/bin/influx -execute '';
+#/usr/bin/influx -execute '';
+#/usr/bin/influx -execute '';
+#/usr/bin/influx -execute '';
+#/usr/bin/influx -execute '';
+
 
 /etc/init.d/influxdb stop
 

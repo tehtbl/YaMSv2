@@ -68,6 +68,9 @@ services:
     command: "/usr/bin/supervisord -c /etc/supervisord.d/supervisord.conf"
     ports:
       - "80:80"
+      - "8083:8083"
+      - "8086:8086"
+      - "2003:2003"
     volumes:
       - ./data/grafinflux/influxdb:/var/lib/influxdb
       - ./data/grafinflux/var_log_supervisor:/var/log/supervisor

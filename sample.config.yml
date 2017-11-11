@@ -20,6 +20,14 @@ general:
     host: db
     port: 5432
 
+  influxdb:
+    host: grafinflux
+    port: 8086
+    db: cryptodb
+    usr: adm
+    pwd: adm
+
+
 datatracker:
   exchanges:
     - bittrex

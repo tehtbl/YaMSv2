@@ -33,6 +33,9 @@ import talib.abstract as ta
 from operator import itemgetter
 from pandas import DataFrame
 from wrapt import synchronized
+from django.forms import model_to_dict
+from influxdb import InfluxDBClient, DataFrameClient
+
 
 from libyams.utils import get_conf
 
@@ -71,22 +74,29 @@ def populate_indicators(dataframe):
 #
 # save data to influxdb
 #
-def save_to_influxdb(data):
+def save_to_influxdb(con, df, tag):
     # duplicates will be overwritten:
     # https://docs.influxdata.com/influxdb/v1.3/troubleshooting/frequently-asked-questions/#how-does-influxdb-handle-duplicate-points
 
+    # logger.debug("influx infos:")
+    # logger.debug(con.get_list_database())
+    # logger.debug(con.get_list_users())
 
-    pass
+    df.fillna(0, inplace=True)
+    con.write_points(df, tag)
+
+    return
 
 
 #
 # worker thread for analysis
 #
 class WorkerThread(threading.Thread):
-    def __init__(self, redis_con):
+    def __init__(self, redis_con, inflx_con):
         threading.Thread.__init__(self)
         self.redis_con = redis_con
         self.redis_pubsub = redis_con.pubsub()
+        self.inflx_con = inflx_con
         self.runner = True
 
     def run(self):
@@ -108,7 +118,7 @@ class WorkerThread(threading.Thread):
                         logger.debug("data in wrong format, aborting...")
                         continue
 
-                    # app_analyze_1    | 2017-11-10 14:08:34,298 - __main__ - DEBUG - {u'xchg': u'btrx', u'pair': u'BTC-1ST', u'tick': u'5m', u'data': [{u'high': 4.277e-05, u'close': 4.277e-05, u'open': 4.25e-05, u'tval': u'2017-10-21T20:10:00', u'low': 4.25e-05}, {u'high': 4.277e-05, u'close': 4.277e-05, u'open': 4.239e-05, u'tval': u'2017-10-21T20:15:00', u'low': 4.239e-05}, {u'high': 4.277e-05, u'close': 4.277e-05, u'open': 4.277e-05, u'tval': u'2017-10-21T20:20:00', u'low': 4.277e-05}]}
+                    # app_analyze_1    | 2017-11-10 14:08:34,298 - __main__ - DEBUG - {u'xchg': u'btrx', u'pair': u'BTC-1ST', u'tick': u'5m', u'data': []}
                     # logger.debug(itm)
                     # logger.debug(itm['data'])
                     # logger.debug(TickerData.objects.all())
@@ -117,11 +127,29 @@ class WorkerThread(threading.Thread):
 
                     if itm['xchg'] == CONFIG['bittrex']['short']:
                         t1 = time.time()
-                        df = populate_indicators(DataFrame(list(TickerData.objects.all().values())))
+
+                        objs = TickerData.objects.all().values('xchg', 'pair', 'tick', 'tval', 'open', 'high', 'low', 'close')
+                        # logger.debug(objs)
+                        df = DataFrame.from_records(objs, index='tval')
+                        df.head()
+
+                        # all_ticks = list(TickerData.objects.all().values())[:5]
+                        # df = populate_indicators(DataFrame(all_ticks))
+                        new_df = populate_indicators(df)
+
+                        # df = populate_indicators(DataFrame(list(TickerData.objects.all().values())))
                         t2 = time.time()
                         logger.debug("TIME of populating indicators for %s at %s on %s was %s sec" % (itm['pair'], itm['xchg'], itm['tick'], str(t2 - t1)))
 
-                        # logger.debug(df)
+                        # try:
+                        #     logger.debug(new_df)
+                        #     logger.debug(save_to_influxdb(self.inflx_con, new_df))
+                        # except Exception:
+                        #     import traceback
+                        #     traceback.print_exc()
+
+                        tag = "%s-%s-%s" % (itm['xchg'], itm['pair'], itm['tick'])
+                        save_to_influxdb(self.inflx_con, new_df, tag)
 
                     logger.debug("finished analyzing %s at %s on %s" % (itm['pair'], itm['xchg'], itm['tick']))
 
@@ -155,8 +183,7 @@ if __name__ == "__main__":
         # logger.debug("received msg type:" + str(type(msg)))
         # logger.debug("received msg:" + str(msg))
 
-        if isinstance(msg, dict) and msg['type'] == 'message' and msg['channel'] == CONFIG["general"]["redis"]["chans"][
-            "db_heartbeat"]:
+        if isinstance(msg, dict) and msg['type'] == 'message' and msg['channel'] == CONFIG["general"]["redis"]["chans"]["db_heartbeat"]:
             itm = json.loads(msg['data'])
 
             logger.debug("db heartbeat info %s" % itm)
@@ -171,10 +198,23 @@ if __name__ == "__main__":
     # bootstrap ORM
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "libyams.settings")
     django.setup()
-
     from libyams.orm.models import TickerData, Indicator
 
+    # TODO: make loop to wait for influxdb up and running, not needed atm because it is starting while db is starting which takes enough time
+    inflx_con = DataFrameClient(CONFIG["general"]["influxdb"]["host"],
+                                CONFIG["general"]["influxdb"]["port"],
+                                CONFIG["general"]["influxdb"]["usr"],
+                                CONFIG["general"]["influxdb"]["pwd"],
+                                CONFIG["general"]["influxdb"]["db"])
+
+    inflx_con.create_database(CONFIG["general"]["influxdb"]["db"])
+    inflx_con.create_user(CONFIG["general"]["influxdb"]["usr"], CONFIG["general"]["influxdb"]["pwd"])
+
+    logger.debug("influx infos:")
+    logger.debug(inflx_con.get_list_database())
+    logger.debug(inflx_con.get_list_users())
+
     logger.info("start WorkerThread()")
-    wt = WorkerThread(rcon)
+    wt = WorkerThread(rcon, inflx_con)
     wt.start()
     time.sleep(.5)
