@@ -28,6 +28,7 @@ import os.path
 import logging
 import datetime
 import threading
+import traceback
 import talib.abstract as ta
 
 from operator import itemgetter
@@ -101,9 +102,8 @@ class WorkerThread(threading.Thread):
 
     def run(self):
         global CONFIG
-        global DB
 
-        self.redis_pubsub.subscribe(CONFIG["general"]["redis"]["chans"]["analyzer"])
+        self.redis_pubsub.subscribe(CONFIG["general"]["redis"]["chans"]["data_analyzer"])
 
         while self.runner:
             msg = self.redis_pubsub.get_message()
@@ -111,8 +111,8 @@ class WorkerThread(threading.Thread):
             # logger.debug(msg)
 
             if isinstance(msg, dict) and msg['type'] == 'message':
-                if msg['channel'] == CONFIG["general"]["redis"]["chans"]["analyzer"]:
-                    itm = json.loads(msg['data'])['item_data']
+                if msg['channel'] == CONFIG["general"]["redis"]["chans"]["data_analyzer"]:
+                    itm = json.loads(msg['data'])['data']
 
                     if "xchg" not in itm.keys() or "pair" not in itm.keys() or "tick" not in itm.keys() or "data" not in itm.keys():
                         logger.debug("data in wrong format, aborting...")
@@ -141,15 +141,12 @@ class WorkerThread(threading.Thread):
                         t2 = time.time()
                         logger.debug("TIME of populating indicators for %s at %s on %s was %s sec" % (itm['pair'], itm['xchg'], itm['tick'], str(t2 - t1)))
 
-                        # try:
-                        #     logger.debug(new_df)
-                        #     logger.debug(save_to_influxdb(self.inflx_con, new_df))
-                        # except Exception:
-                        #     import traceback
-                        #     traceback.print_exc()
-
-                        tag = "%s-%s-%s" % (itm['xchg'], itm['pair'], itm['tick'])
-                        save_to_influxdb(self.inflx_con, new_df, tag)
+                        try:
+                            tag = "%s-%s-%s" % (itm['xchg'], itm['pair'], itm['tick'])
+                            save_to_influxdb(self.inflx_con, new_df, tag)
+                        except Exception:
+                            logger.debug("TRACEBACK for SAVING TO INFLUXDB")
+                            logger.debug(traceback.print_exc())
 
                     logger.debug("finished analyzing %s at %s on %s" % (itm['pair'], itm['xchg'], itm['tick']))
 
@@ -172,27 +169,18 @@ if __name__ == "__main__":
     # start
     logger.debug("startup redis connection")
     rcon = redis.StrictRedis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
-    PUBSUB = rcon.pubsub()
 
-    # check if data tracker is ready for storing and sending data
-    rcon.publish(CONFIG["general"]["redis"]["chans"]["db_heartbeat_ctrl"], 'db_ready')
-    PUBSUB.subscribe(CONFIG["general"]["redis"]["chans"]["db_heartbeat"])
-    while True:
-        msg = PUBSUB.get_message()
+    # check if data tracker is ready for storing data
+    runner = True
+    while runner:
+        itm = json.loads(rcon.get(CONFIG["general"]["redis"]["vars"]["hb_tracker"]))
 
-        # logger.debug("received msg type:" + str(type(msg)))
-        # logger.debug("received msg:" + str(msg))
+        logger.debug("db heartbeat info %s" % itm)
 
-        if isinstance(msg, dict) and msg['type'] == 'message' and msg['channel'] == CONFIG["general"]["redis"]["chans"]["db_heartbeat"]:
-            itm = json.loads(msg['data'])
-
-            logger.debug("db heartbeat info %s" % itm)
-
-            if itm['state'] and (int(time.time()) - int(itm['time'])) < 30:
-                break
+        if itm['state'] and (int(time.time()) - int(itm['time'])) < 15:
+            runner = False
 
         logger.info("tracker not yet ready, waiting another 5s...")
-        rcon.publish(CONFIG["general"]["redis"]["chans"]["db_heartbeat_ctrl"], 'db_ready')
         time.sleep(5)
 
     # bootstrap ORM

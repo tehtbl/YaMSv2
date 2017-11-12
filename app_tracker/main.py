@@ -27,6 +27,7 @@ import os.path
 import logging
 import datetime
 import threading
+import traceback
 
 from libyams.utils import get_conf
 from django.core.management import execute_from_command_line
@@ -41,10 +42,6 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(leve
 logger = logging.getLogger(__name__)
 
 CONFIG = get_conf()
-DB = {
-    'accessible': False,
-    'initialized': False
-}
 
 
 #
@@ -112,6 +109,43 @@ def save_to_db(itm):
 #
 # worker thread for analysis
 #
+class HeartBeatThread(threading.Thread):
+    def __init__(self, redis_con):
+        threading.Thread.__init__(self)
+        self.redis_con = redis_con
+        self.runner = True
+
+    def run(self):
+        global CONFIG
+
+        DBSTATUS = False
+        while self.runner:
+
+            if not check_db():
+                DBSTATUS = False
+
+            if not DBSTATUS and check_db():
+                try:
+                    time.sleep(3)
+                    execute_from_command_line([sys.argv[0], 'makemigrations'])
+                    execute_from_command_line([sys.argv[0], 'migrate'])
+                    DBSTATUS = True
+                except Exception:
+                    logger.debug("TRACEBACK for INIT DB")
+                    logger.debug(traceback.print_exc())
+                    DBSTATUS = False
+
+            self.redis_con.set(CONFIG["general"]["redis"]["vars"]["hb_tracker"], json.dumps({
+                'state': DBSTATUS,
+                'time': int(time.time())
+            }))
+
+            time.sleep(10)
+
+
+#
+# worker thread for analysis
+#
 class WorkerThread(threading.Thread):
     def __init__(self, redis_con):
         threading.Thread.__init__(self)
@@ -121,39 +155,17 @@ class WorkerThread(threading.Thread):
 
     def run(self):
         global CONFIG
-        global DB
 
-        self.redis_pubsub.subscribe(CONFIG["general"]["redis"]["chans"]["db_heartbeat_ctrl"],
-                                    CONFIG["general"]["redis"]["chans"]["data"])
+        self.redis_pubsub.subscribe(CONFIG["general"]["redis"]["chans"]["data_tracker"])
 
         while self.runner:
             msg = self.redis_pubsub.get_message()
 
             # logger.debug(msg)
 
-            if not DB['accessible']:
-                DB['accessible'] = check_db()
-
-            if DB['accessible'] and not DB['initialized']:
-                time.sleep(1)
-                execute_from_command_line([sys.argv[0], 'makemigrations'])
-                execute_from_command_line([sys.argv[0], 'migrate'])
-
-                DB['initialized'] = True
-
             if isinstance(msg, dict) and msg['type'] == 'message':
-                if msg['channel'] == CONFIG["general"]["redis"]["chans"]["db_heartbeat_ctrl"]:
-                    itm = msg['data']
 
-                    logger.debug(itm)
-
-                    if itm == 'db_ready':
-                        self.redis_con.publish(CONFIG["general"]["redis"]["chans"]["db_heartbeat"], json.dumps({
-                            'state': DB['initialized'],
-                            'time': int(time.time())
-                        }))
-
-                if msg['channel'] == CONFIG["general"]["redis"]["chans"]["data"]:
+                if msg['channel'] == CONFIG["general"]["redis"]["chans"]["data_tracker"]:
                     itm = json.loads(msg['data'])
 
                     if "xchg" not in itm.keys() or "pair" not in itm.keys() or "tick" not in itm.keys() or "data" not in itm.keys():
@@ -161,10 +173,10 @@ class WorkerThread(threading.Thread):
                         continue
 
                     save_to_db(itm)
-                    itm['data'] = [] # remove data as we get them from db directly
+                    itm['data'] = [] # remove data to save space, analyzer will get them from db directly
 
-                    self.redis_con.publish(CONFIG["general"]["redis"]["chans"]["analyzer"], json.dumps({
-                        'item_data': itm,
+                    self.redis_con.publish(CONFIG["general"]["redis"]["chans"]["data_analyzer"], json.dumps({
+                        'data': itm,
                         'time': int(time.time())
                     }))
 
@@ -191,7 +203,12 @@ if __name__ == "__main__":
     rcon.config_set('client-output-buffer-limit', 'slave 0 0 0')
     rcon.config_set('client-output-buffer-limit', 'pubsub 0 0 0')
 
-    logger.info("start WorkerThread()")
+    logger.debug("start HeartBeatThread()")
+    hb = HeartBeatThread(rcon)
+    hb.start()
+    time.sleep(.5)
+
+    logger.debug("start WorkerThread()")
     wt = WorkerThread(rcon)
     wt.start()
     time.sleep(.5)

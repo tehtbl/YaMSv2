@@ -9,12 +9,11 @@ general:
   redis:
     host: redis
     port: 6379
+    vars:
+      hb_tracker: 'heartbeat-tracker'
     chans:
-      db_heartbeat: 'channel-db-hb'
-      db_heartbeat_ctrl: 'channel-db-hb-ctrl'
-      comm: 'channel-comm'
-      data: 'channel-data'
-      analyzer: 'channel-analyzer'
+      data_tracker: 'channel-data'
+      data_analyzer: 'channel-analyzer'
 
   database:
     host: db
