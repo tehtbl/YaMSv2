@@ -31,6 +31,7 @@ import traceback
 
 from libyams.utils import get_conf
 from django.core.management import execute_from_command_line
+from django.db import connection
 
 # bootstrap ORM
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "libyams.settings")
@@ -53,6 +54,10 @@ def check_db():
     try:
         s = socket.create_connection((CONFIG["general"]["database"]["host"], CONFIG["general"]["database"]["port"]), 5)
         s.close()
+
+        cursor = connection.cursor()
+        cursor.execute("select 1")
+
         return True
     except Exception:
         return False

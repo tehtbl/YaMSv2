@@ -157,6 +157,34 @@ class WorkerThread(threading.Thread):
 
 
 #
+# db check thread for analysis
+#
+class DBCheckThread(threading.Thread):
+    def __init__(self, redis_con):
+        threading.Thread.__init__(self)
+        self.redis_con = redis_con
+        self.runner = True
+
+    def run(self):
+        global TRACKER_ALIVE
+
+        TRACKER_ALIVE = False
+        while self.runner:
+            try:
+                itm = json.loads(self.redis_con.get(CONFIG["general"]["redis"]["vars"]["hb_tracker"]))
+
+                logger.debug("db heartbeat info %s" % itm)
+                if itm['state'] and (int(time.time()) - int(itm['time'])) < 15:
+                    TRACKER_ALIVE = True
+                else:
+                    TRACKER_ALIVE = False
+            except:
+                pass
+
+            time.sleep(5)
+
+
+#
 # MAiN
 #
 if __name__ == "__main__":
@@ -166,22 +194,16 @@ if __name__ == "__main__":
     if CONFIG['general']['loglevel'] == 'debug':
         logger.setLevel(logging.DEBUG)
 
-    # start
-    logger.debug("startup redis connection")
+    logger.debug("setup redis connection")
     rcon = redis.StrictRedis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
 
-    # check if data tracker is ready for storing data
-    runner = True
-    while runner:
-        itm = json.loads(rcon.get(CONFIG["general"]["redis"]["vars"]["hb_tracker"]))
+    logger.debug("start HeartBeatThread()")
+    dbt = DBCheckThread(rcon)
+    dbt.start()
+    time.sleep(.5)
 
-        logger.debug("db heartbeat info %s" % itm)
-
-        if itm['state'] and (int(time.time()) - int(itm['time'])) < 15:
-            runner = False
-
-        logger.info("tracker not yet ready, waiting another 5s...")
-        time.sleep(5)
+    while not TRACKER_ALIVE:
+        time.sleep(.5)
 
     # bootstrap ORM
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "libyams.settings")

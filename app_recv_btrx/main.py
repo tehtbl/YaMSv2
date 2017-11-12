@@ -24,6 +24,7 @@ import random
 import logging
 import datetime
 import threading
+import traceback
 import requests as req
 
 from pytz import utc
@@ -35,8 +36,8 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(leve
 logger = logging.getLogger(__name__)
 
 CONFIG = get_conf()
-CON_REDIS = None
-PUBSUB = None
+RCON = None
+TRACKER_ALIVE = False
 
 
 #
@@ -108,7 +109,7 @@ class SendTickerData(threading.Thread):
         self.xchg = CONFIG["bittrex"]["short"]
 
     def run(self):
-        global CON_REDIS
+        global RCON
 
         logger.info("receiving %s at %s on %s" % (self.pair, self.xchg, self.tick))
 
@@ -136,7 +137,11 @@ class SendTickerData(threading.Thread):
             'data': to_insert
         }
 
-        CON_REDIS.publish(CONFIG["general"]["redis"]["chans"]["data_tracker"], json.dumps(d))
+        if not TRACKER_ALIVE:
+            logger.info("tracker not available, not sending data to tracker")
+            return False
+        else:
+            RCON.publish(CONFIG["general"]["redis"]["chans"]["data_tracker"], json.dumps(d))
 
         logger.debug("finished receiving %s at %s on %s" % (self.pair, self.xchg, self.tick))
         time.sleep(.5)
@@ -146,13 +151,18 @@ class SendTickerData(threading.Thread):
 # data receiving method
 #
 def recv_data(tick):
-    thrds = []
+    global TRACKER_ALIVE
 
+    if not TRACKER_ALIVE:
+        logger.info("tracker not available, not receiving data")
+        return False
+
+    logger.info("getting related currencies from market summary")
     curs = get_related_currencies()
     if CONFIG["general"]["production"]:
         random.shuffle(curs)
 
-    logger.info("getting related currencies from market summary")
+    thrds = []
     for pair in curs:
         if len(thrds) >= CONFIG["general"]["limit_threads_recv"]:
             t = thrds[0]
@@ -172,6 +182,34 @@ def recv_data(tick):
         thrds.remove(x)
 
     return True
+
+
+#
+# db check thread for analysis
+#
+class DBCheckThread(threading.Thread):
+    def __init__(self, redis_con):
+        threading.Thread.__init__(self)
+        self.redis_con = redis_con
+        self.runner = True
+
+    def run(self):
+        global TRACKER_ALIVE
+
+        TRACKER_ALIVE = False
+        while self.runner:
+            try:
+                itm = json.loads(self.redis_con.get(CONFIG["general"]["redis"]["vars"]["hb_tracker"]))
+
+                logger.debug("db heartbeat info %s" % itm)
+                if itm['state'] and (int(time.time()) - int(itm['time'])) < 15:
+                    TRACKER_ALIVE = True
+                else:
+                    TRACKER_ALIVE = False
+            except:
+                pass
+
+            time.sleep(5)
 
 
 #
@@ -195,20 +233,15 @@ if __name__ == "__main__":
         sys.exit(0)
 
     logger.debug("setup redis connection")
-    CON_REDIS = redis.StrictRedis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
+    RCON = redis.StrictRedis(host=CONFIG["general"]["redis"]["host"], port=CONFIG["general"]["redis"]["port"], db=0)
 
-    # check if data tracker is ready for storing data
-    runner = True
-    while runner:
-        itm = json.loads(CON_REDIS.get(CONFIG["general"]["redis"]["vars"]["hb_tracker"]))
+    logger.debug("start HeartBeatThread()")
+    dbt = DBCheckThread(RCON)
+    dbt.start()
+    time.sleep(.5)
 
-        logger.debug("db heartbeat info %s" % itm)
-
-        if itm['state'] and (int(time.time()) - int(itm['time'])) < 15:
-            runner = False
-
-        logger.info("tracker not yet ready, waiting another 5s...")
-        time.sleep(5)
+    while not TRACKER_ALIVE:
+        time.sleep(.5)
 
     # development mode
     if not CONFIG["general"]["production"]:
