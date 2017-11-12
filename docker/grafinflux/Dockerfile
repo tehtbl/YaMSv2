@@ -45,6 +45,7 @@ ADD ./docker/${LOCAL_APPDIR}/influxdb/init.sh /init-influxdb.sh
 ADD ./docker/${LOCAL_APPDIR}/influxdb/influxdb.conf /etc/influxdb/influxdb.conf
 ADD ./docker/${LOCAL_APPDIR}/influxdb/etc_initd_influxdb /etc/init.d/influxdb
 RUN chmod +x /etc/init.d/influxdb
+RUN chmod +r /etc/influxdb/influxdb.conf
 RUN /bin/bash /init-influxdb.sh
 
 # grafana
