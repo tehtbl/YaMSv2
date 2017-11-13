@@ -12,6 +12,8 @@ fi
 
 #until nc localhost 3000 < /dev/null; do sleep 1; done
 
+sleep 3
+
 # create influxdb datasource
 curl 'http://admin:admin@localhost:3000/api/datasources' \
     -X POST -H "Content-Type: application/json" \
