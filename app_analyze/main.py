@@ -84,6 +84,7 @@ def save_to_influxdb(con, df, tag):
     # logger.debug(con.get_list_users())
 
     df.fillna(0, inplace=True)
+    con.write_points(df, 'all')
     con.write_points(df, tag)
 
     return
@@ -128,7 +129,7 @@ class WorkerThread(threading.Thread):
                     if itm['xchg'] == CONFIG['bittrex']['short']:
                         t1 = time.time()
 
-                        objs = TickerData.objects.all().values('xchg', 'pair', 'tick', 'tval', 'open', 'high', 'low', 'close')
+                        objs = TickerData.objects.all().values('xchg', 'pair', 'tick', 'tval', 'open', 'high', 'low', 'close').order_by('-tval')[:50]
                         # logger.debug(objs)
                         df = DataFrame.from_records(objs, index='tval')
                         df.head()

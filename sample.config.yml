@@ -26,6 +26,10 @@ general:
     usr: adm
     pwd: adm
 
+  # highly depends on the power of your CPU and RAM
+  analyze:
+    how_many_values: 500
+
 
 datatracker:
   exchanges:

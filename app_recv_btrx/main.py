@@ -159,8 +159,8 @@ def recv_data(tick):
 
     logger.info("getting related currencies from market summary")
     curs = get_related_currencies()
-    if CONFIG["general"]["production"]:
-        random.shuffle(curs)
+    # if CONFIG["general"]["production"]:
+    #     random.shuffle(curs)
 
     thrds = []
     for pair in curs:
