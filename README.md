@@ -28,6 +28,17 @@ for i in $(docker ps -a -q); do docker rm -f "${i}"; done
 for i in $(docker images -a -q); do docker rmi "${i}"; done
 ```
 
+* Forwarding rules:
+```
+ssh yams -L 8080:0.0.0.0:80 -L 8083:0.0.0.0:8083 -L 8086:0.0.0.0:8086
+```
+
+* Grafana queries
+```
+SHOW MEASUREMENTS
+SHOW FIELD KEYS FROM "all"
+```
+
 # Contributing
 Feel like there is a feature missing? I welcome your pull requests! Few pointers for contributions:
 
