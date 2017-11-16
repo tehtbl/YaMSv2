@@ -28,6 +28,7 @@ RUN apt-get -y update && \
   net-tools \
   supervisor \
   nginx \
+  netcat-openbsd \
   wget && \
  curl -sL https://deb.nodesource.com/setup_7.x | bash - && \
  apt-get install -y nodejs
