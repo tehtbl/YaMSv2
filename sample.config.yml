@@ -6,6 +6,9 @@ general:
   limit_threads_recv: 5
   limit_threads_analysis: 5
 
+  # highly depends on the power of your CPU and RAM
+  limit_tickerdata: 50
+
   redis:
     host: redis
     port: 6379
@@ -26,15 +29,12 @@ general:
     usr: adm
     pwd: adm
 
-  # highly depends on the power of your CPU and RAM
-  analyze:
-    how_many_values: 500
-
 
 datatracker:
   exchanges:
     - bittrex
 #    - bitfinex
+
 
 bittrex:
   enabled: true

@@ -99,6 +99,7 @@ class WorkerThread(threading.Thread):
         self.redis_con = redis_con
         self.redis_pubsub = redis_con.pubsub()
         self.inflx_con = inflx_con
+        self.limit_tickerdata = int(CONFIG["general"]["limit_tickerdata"])
         self.runner = True
 
     def run(self):
@@ -129,7 +130,7 @@ class WorkerThread(threading.Thread):
                     if itm['xchg'] == CONFIG['bittrex']['short']:
                         t1 = time.time()
 
-                        objs = TickerData.objects.all().values('xchg', 'pair', 'tick', 'tval', 'open', 'high', 'low', 'close').order_by('-tval')[:50]
+                        objs = TickerData.objects.all().values('xchg', 'pair', 'tick', 'tval', 'open', 'high', 'low', 'close').order_by('-tval')[:self.limit_tickerdata]
                         # logger.debug(objs)
                         df = DataFrame.from_records(objs, index='tval')
                         df.head()
