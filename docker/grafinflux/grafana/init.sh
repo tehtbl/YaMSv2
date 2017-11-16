@@ -10,12 +10,16 @@ fi
 
 /etc/init.d/grafana-server start
 
-#until nc localhost 3000 < /dev/null; do sleep 1; done
+echo 'waiting for grafana boot'
+until nc -nv 127.0.0.1 3000 < /dev/null; do sleep 1; done
+#until nc -nv localhost 3000 < /dev/null; do sleep 1; done
 
-sleep 3
+echo 'config grafana'
+sleep 1
 
 # create influxdb datasource
-curl 'http://admin:admin@localhost:3000/api/datasources' \
+#curl 'http://admin:admin@localhost:3000/api/datasources' \
+curl 'http://admin:admin@127.0.0.1:3000/api/datasources' \
     -X POST -H "Content-Type: application/json" \
     --data-binary <<DATASOURCE \
       '{
