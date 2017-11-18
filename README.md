@@ -73,3 +73,12 @@ redis_1          | 1:M 05 Nov 19:27:45.429 * Ready to accept connections
 - keep-alive thread which sends out a str+nonce to controller and back 
   - use different strigns for db ready and keepalive(ping-pong) of controller or getter
 - use extra redis channel for "which data should be received next"-queue, for the getter as well as when controller detects len(data)==0  
+
+
+# Queries
+```
+SELECT "close" FROM "btrx-BTC-1ST-5m" WHERE "tval" > now() - 30m
+SELECT DIFFERENCE("close") FROM "btrx-BTC-1ST-5m" WHERE "tval" > now() - 30m
+
+```
+
