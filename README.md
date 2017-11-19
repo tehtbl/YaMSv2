@@ -1,8 +1,7 @@
-# YaMSv2
-Yet another MarketScanner v2
+# YaMSv2 - Yet another MarketScanner v2
 
-YaMS v2 is intended to pull data from exchanges (every 5m, 30m, 4h, 1d), adding indicators to the stream and saving it to an elastisearch instance where you can further investigate your strategies with Kibana.
- 
+YaMS v2 is intended to pull data from exchanges, populating indicators to the stream and saving it to several databases (Postrgres, InfluxDB). Afterwards you can use Grafana/Kapacitor/${WHATEVER} to create dashboard overviews and alerts.
+
 ![Architecture](docs/YaMSv2.jpg)
 
 # Features
@@ -30,13 +29,7 @@ for i in $(docker images -a -q); do docker rmi "${i}"; done
 
 * Forwarding rules:
 ```
-ssh yams -L 8080:0.0.0.0:80 -L 8083:0.0.0.0:8083 -L 8086:0.0.0.0:8086
-```
-
-* Grafana queries
-```
-SHOW MEASUREMENTS
-SHOW FIELD KEYS FROM "all"
+ssh host -L 8080:0.0.0.0:80 -L 8083:0.0.0.0:8083 -L 8086:0.0.0.0:8086
 ```
 
 # Contributing
@@ -46,14 +39,7 @@ Feel like there is a feature missing? I welcome your pull requests! Few pointers
 - If you are unsure, discuss the feature on the [btc-echo slack](https://btc-echo.slack.com/) in room `#tools` or in a [github issue](https://github.com/YaMSorg/yams/issues) before
 
 # Donations
-Feel like you wanna honor my work? That's awesome!
-Just ask me in the Chat for a donation address :)
-
-# Links
-* https://stackoverflow.com/questions/45595750/use-django-orm-outside-of-django
-* https://stackoverflow.com/questions/41825037/how-to-execute-external-script-in-the-django-environment/41826771#41826771
-* https://stackoverflow.com/questions/33170016/how-to-use-django-1-8-5-orm-without-creating-a-django-project
-* https://vincent.is/speeding-up-django-postgres/
+Feel like you wanna honor my work? That's awesome! Just ask me in the Chat for a donation address :)
 
 # TODO
 - redis to own image:
@@ -77,8 +63,10 @@ redis_1          | 1:M 05 Nov 19:27:45.429 * Ready to accept connections
 
 # Queries
 ```
+SHOW MEASUREMENTS
+SHOW FIELD KEYS FROM "all"
+
 SELECT "close" FROM "btrx-BTC-1ST-5m" WHERE "tval" > now() - 30m
 SELECT DIFFERENCE("close") FROM "btrx-BTC-1ST-5m" WHERE "tval" > now() - 30m
 
 ```
-

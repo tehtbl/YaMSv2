@@ -7,7 +7,7 @@ general:
   limit_threads_analysis: 5
 
   # highly depends on the power of your CPU and RAM
-  limit_tickerdata: 50
+  limit_tickerdata: 500
 
   redis:
     host: redis

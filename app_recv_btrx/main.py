@@ -243,12 +243,6 @@ if __name__ == "__main__":
     while not TRACKER_ALIVE:
         time.sleep(.5)
 
-    # development mode
-    if not CONFIG["general"]["production"]:
-        logger.info(">>> DEVELOPMENT MODE, NO SCHEDULING <<<")
-        recv_data('5m')
-        sys.exit(0)
-
     # production mode: set scheduling of executing receiver methods
     if CONFIG["general"]["production"]:
         # start receiver and scheduler
@@ -276,3 +270,9 @@ if __name__ == "__main__":
                 time.sleep(5)
         except (KeyboardInterrupt, SystemExit):
             scheduler.shutdown()
+
+    else:
+        logger.info(">>> DEVELOPMENT MODE, NO SCHEDULING <<<")
+        recv_data('5m')
+        sys.exit(0)
+
