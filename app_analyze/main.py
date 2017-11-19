@@ -125,11 +125,11 @@ def save_to_influxdb(con, df, measurement):
         json_to_send.append({
             "measurement": measurement,
             "tags": tags,
-            "time": int(d["tval"]),
+            "time": datetime.datetime.utcfromtimestamp(int(d["tval"])/1000).strftime("%Y-%m-%dT%H:%M:%SZ"), #int(d["tval"])/1000,
             "fields": fields
         })
 
-    # logger.debug(json_to_send[:5])
+    logger.debug(json_to_send[:5])
 
     # con.write_points(df, measurements)
     # con.write_points(json.dumps(json_to_send))
