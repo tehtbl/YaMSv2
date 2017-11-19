@@ -75,7 +75,7 @@ def populate_indicators(dataframe):
 #
 # save data to influxdb
 #
-def save_to_influxdb(con, df, tag):
+def save_to_influxdb(con, df, measurement):
     # duplicates will be overwritten:
     # https://docs.influxdata.com/influxdb/v1.3/troubleshooting/frequently-asked-questions/#how-does-influxdb-handle-duplicate-points
 
@@ -84,8 +84,56 @@ def save_to_influxdb(con, df, tag):
     # logger.debug(con.get_list_users())
 
     df.fillna(0, inplace=True)
-    con.write_points(df, 'all')
-    con.write_points(df, tag)
+    # con.write_points(df, 'all')
+    # logger.debug(df[:5].to_json(orient='records'))
+    df_json = df.to_json(orient='records')
+    # logger.debug(df_json)
+
+    # json_body = [
+    #     {
+    #         "measurement": "cpu_load_short",
+    #         "tags": {
+    #             "host": "server01",
+    #             "region": "us-west"
+    #         },
+    #         "time": "2009-11-10T23:00:00Z",
+    #         "fields": {
+    #             "Float_value": 0.64,
+    #             "Int_value": 3,
+    #             "String_value": "Text",
+    #             "Bool_value": True
+    #         }
+    #     }
+    # ]
+
+    tag_keys = [
+        "pair",
+        "tick",
+        "xchg",
+    ]
+
+    json_to_send = []
+    for d in json.loads(df_json):
+        tags = {}
+        fields = {}
+        for i in d.keys():
+            if i in tag_keys:
+                tags[i] = d[i]
+            else:
+                fields[i] = d[i]
+
+        json_to_send.append({
+            "measurement": measurement,
+            "tags": tags,
+            "time": int(d["tval"]),
+            "fields": fields
+        })
+
+    # logger.debug(json_to_send[:5])
+
+    # con.write_points(df, measurements)
+    # con.write_points(json.dumps(json_to_send))
+    con.write_points(json_to_send)
 
     return
 
@@ -130,22 +178,26 @@ class WorkerThread(threading.Thread):
                     if itm['xchg'] == CONFIG['bittrex']['short']:
                         t1 = time.time()
 
-                        objs = TickerData.objects.all().values('xchg', 'pair', 'tick', 'tval', 'open', 'high', 'low', 'close').order_by('-tval')[:self.limit_tickerdata]
+                        objs = TickerData.objects.all().values('pk', 'xchg', 'pair', 'tick', 'tval', 'open', 'high', 'low', 'close').order_by('-tval')[:self.limit_tickerdata]
                         # logger.debug(objs)
-                        df = DataFrame.from_records(objs, index='tval')
+                        # df = DataFrame.from_records(objs, index='tval')
+                        # df = DataFrame.from_records(objs)
+                        df = DataFrame.from_records(objs, index='pk')
                         df.head()
 
                         # all_ticks = list(TickerData.objects.all().values())[:5]
                         # df = populate_indicators(DataFrame(all_ticks))
                         new_df = populate_indicators(df)
 
-                        # df = populate_indicators(DataFrame(list(TickerData.objects.all().values())))
                         t2 = time.time()
                         logger.debug("TIME of populating indicators for %s at %s on %s was %s sec" % (itm['pair'], itm['xchg'], itm['tick'], str(t2 - t1)))
 
+                        # logger.debug(new_df[:5])
+
                         try:
-                            tag = "%s-%s-%s" % (itm['xchg'], itm['pair'], itm['tick'])
-                            save_to_influxdb(self.inflx_con, new_df, tag)
+                            # tag = "%s-%s-%s" % (itm['xchg'], itm['pair'], itm['tick'])
+                            # save_to_influxdb(self.inflx_con, new_df, tag)
+                            save_to_influxdb(self.inflx_con, new_df, itm['xchg'])
                         except Exception:
                             logger.debug("TRACEBACK for SAVING TO INFLUXDB")
                             logger.debug(traceback.print_exc())
@@ -213,11 +265,12 @@ if __name__ == "__main__":
     from libyams.orm.models import TickerData, Indicator
 
     # TODO: make loop to wait for influxdb up and running, not needed atm because it is starting while db is starting which takes enough time
-    inflx_con = DataFrameClient(CONFIG["general"]["influxdb"]["host"],
-                                CONFIG["general"]["influxdb"]["port"],
-                                CONFIG["general"]["influxdb"]["usr"],
-                                CONFIG["general"]["influxdb"]["pwd"],
-                                CONFIG["general"]["influxdb"]["db"])
+    # inflx_con = DataFrameClient(CONFIG["general"]["influxdb"]["host"],
+    inflx_con = InfluxDBClient(CONFIG["general"]["influxdb"]["host"],
+                               CONFIG["general"]["influxdb"]["port"],
+                               CONFIG["general"]["influxdb"]["usr"],
+                               CONFIG["general"]["influxdb"]["pwd"],
+                               CONFIG["general"]["influxdb"]["db"])
 
     inflx_con.create_database(CONFIG["general"]["influxdb"]["db"])
     inflx_con.create_user(CONFIG["general"]["influxdb"]["usr"], CONFIG["general"]["influxdb"]["pwd"])

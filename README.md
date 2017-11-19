@@ -69,4 +69,5 @@ SHOW FIELD KEYS FROM "all"
 SELECT "close" FROM "btrx-BTC-1ST-5m" WHERE "tval" > now() - 30m
 SELECT DIFFERENCE("close") FROM "btrx-BTC-1ST-5m" WHERE "tval" > now() - 30m
 
+SELECT "pair", "close" FROM "btrx" WHERE time = '2017-11-14T18:00:00Z'
 ```
