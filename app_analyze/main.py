@@ -129,7 +129,7 @@ def save_to_influxdb(con, df, measurement):
             "fields": fields
         })
 
-    logger.debug(json_to_send[:5])
+    # logger.debug(json_to_send[:5])
 
     # con.write_points(df, measurements)
     # con.write_points(json.dumps(json_to_send))
