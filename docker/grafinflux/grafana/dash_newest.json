@@ -1,0 +1,430 @@
+{
+  "meta": {
+    "type": "db",
+    "canSave": true,
+    "canEdit": true,
+    "canStar": true,
+    "slug": "main",
+    "expires": "0001-01-01T00:00:00Z",
+    "created": "2017-11-20T19:28:10Z",
+    "updated": "2017-11-20T20:02:45Z",
+    "updatedBy": "admin",
+    "createdBy": "admin",
+    "version": 3
+  },
+  "dashboard": {
+    "annotations": {
+      "list": []
+    },
+    "editable": true,
+    "gnetId": null,
+    "graphTooltip": 0,
+    "hideControls": false,
+    "id": 2,
+    "links": [],
+    "refresh": false,
+    "rows": [
+      {
+        "collapse": false,
+        "height": 387,
+        "panels": [
+          {
+            "aliasColors": {},
+            "bars": false,
+            "datasource": "influx",
+            "fill": 0,
+            "id": 1,
+            "legend": {
+              "alignAsTable": true,
+              "avg": false,
+              "current": false,
+              "max": false,
+              "min": false,
+              "rightSide": true,
+              "show": true,
+              "total": false,
+              "values": false
+            },
+            "lines": true,
+            "linewidth": 1,
+            "links": [],
+            "nullPointMode": "null",
+            "percentage": false,
+            "pointradius": 5,
+            "points": false,
+            "renderer": "flot",
+            "seriesOverrides": [],
+            "span": 12,
+            "stack": true,
+            "steppedLine": false,
+            "targets": [
+              {
+                "dsType": "influxdb",
+                "groupBy": [
+                  {
+                    "params": [
+                      "$interval"
+                    ],
+                    "type": "time"
+                  }
+                ],
+                "hide": true,
+                "measurement": "/^$tmpl_xchg$/",
+                "policy": "default",
+                "query": "SELECT \"/$tmpl_values/\" FROM \"/$tmpl_xchg/\" WHERE \"pair\" =~ '/$tmpl_pair/' AND \"tick\" =~ '/$tmpl_tick/'",
+                "rawQuery": true,
+                "refId": "A",
+                "resultFormat": "time_series",
+                "select": [
+                  [
+                    {
+                      "params": [
+                        "/^$tmpl_values$/"
+                      ],
+                      "type": "field"
+                    }
+                  ]
+                ],
+                "tags": [
+                  {
+                    "key": "pair",
+                    "operator": "=~",
+                    "value": "/^$tmpl_pair$/"
+                  },
+                  {
+                    "condition": "AND",
+                    "key": "tick",
+                    "operator": "=~",
+                    "value": "/^$tmpl_tick$/"
+                  }
+                ]
+              },
+              {
+                "dsType": "influxdb",
+                "groupBy": [],
+                "hide": true,
+                "measurement": "btrx",
+                "policy": "default",
+                "query": "SELECT \"close\" FROM \"btrx\" WHERE \"pair\" = 'BTC-1ST' AND \"tick\" = '5m' AND $timeFilter",
+                "rawQuery": true,
+                "refId": "B",
+                "resultFormat": "time_series",
+                "select": [
+                  [
+                    {
+                      "params": [
+                        "close"
+                      ],
+                      "type": "field"
+                    }
+                  ]
+                ],
+                "tags": [
+                  {
+                    "key": "pair",
+                    "operator": "=",
+                    "value": "BTC-1ST"
+                  },
+                  {
+                    "condition": "AND",
+                    "key": "tick",
+                    "operator": "=",
+                    "value": "5m"
+                  }
+                ]
+              },
+              {
+                "dsType": "influxdb",
+                "groupBy": [
+                  {
+                    "params": [
+                      "$interval"
+                    ],
+                    "type": "time"
+                  },
+                  {
+                    "params": [
+                      "null"
+                    ],
+                    "type": "fill"
+                  }
+                ],
+                "policy": "default",
+                "query": "SELECT  /$tmpl_values/ FROM /$tmpl_xchg/ WHERE \"pair\" =~ /$tmpl_pair/ AND \"tick\" =~ /$tmpl_tick/ AND $timeFilter",
+                "rawQuery": true,
+                "refId": "C",
+                "resultFormat": "time_series",
+                "select": [
+                  [
+                    {
+                      "params": [
+                        "value"
+                      ],
+                      "type": "field"
+                    },
+                    {
+                      "params": [],
+                      "type": "mean"
+                    }
+                  ]
+                ],
+                "tags": []
+              }
+            ],
+            "thresholds": [],
+            "timeFrom": null,
+            "timeShift": null,
+            "title": "CHART of '$tmpl_pair' @$tmpl_tick ($tmpl_values)",
+            "tooltip": {
+              "shared": true,
+              "sort": 0,
+              "value_type": "individual"
+            },
+            "transparent": true,
+            "type": "graph",
+            "xaxis": {
+              "mode": "time",
+              "name": null,
+              "show": true,
+              "values": []
+            },
+            "yaxes": [
+              {
+                "format": "short",
+                "label": null,
+                "logBase": 1,
+                "max": null,
+                "min": null,
+                "show": true
+              },
+              {
+                "format": "short",
+                "label": null,
+                "logBase": 1,
+                "max": null,
+                "min": null,
+                "show": true
+              }
+            ]
+          }
+        ],
+        "repeat": null,
+        "repeatIteration": null,
+        "repeatRowId": null,
+        "showTitle": false,
+        "title": "Dashboard Row",
+        "titleSize": "h4"
+      },
+      {
+        "collapse": false,
+        "height": 250,
+        "panels": [
+          {
+            "columns": [],
+            "fontSize": "100%",
+            "id": 2,
+            "pageSize": null,
+            "scroll": true,
+            "showHeader": true,
+            "sort": {
+              "col": 0,
+              "desc": true
+            },
+            "span": 12,
+            "styles": [
+              {
+                "dateFormat": "YYYY-MM-DD HH:mm:ss",
+                "pattern": "Time",
+                "type": "date"
+              },
+              {
+                "colorMode": null,
+                "colors": [
+                  "rgba(245, 54, 54, 0.9)",
+                  "rgba(237, 129, 40, 0.89)",
+                  "rgba(50, 172, 45, 0.97)"
+                ],
+                "decimals": 2,
+                "pattern": "/.*/",
+                "thresholds": [],
+                "type": "number",
+                "unit": "short"
+              }
+            ],
+            "targets": [
+              {
+                "dsType": "influxdb",
+                "groupBy": [],
+                "measurement": "all",
+                "policy": "default",
+                "query": "SELECT distinct(\"pair\") FROM \"all\"",
+                "rawQuery": true,
+                "refId": "A",
+                "resultFormat": "table",
+                "select": [
+                  [
+                    {
+                      "params": [
+                        "pair"
+                      ],
+                      "type": "field"
+                    },
+                    {
+                      "params": [],
+                      "type": "distinct"
+                    }
+                  ]
+                ],
+                "tags": []
+              }
+            ],
+            "title": "Panel Title",
+            "transform": "table",
+            "type": "table"
+          }
+        ],
+        "repeat": null,
+        "repeatIteration": null,
+        "repeatRowId": null,
+        "showTitle": false,
+        "title": "Dashboard Row",
+        "titleSize": "h6"
+      }
+    ],
+    "schemaVersion": 14,
+    "style": "dark",
+    "tags": [],
+    "templating": {
+      "list": [
+        {
+          "allValue": null,
+          "current": {
+            "text": "btrx",
+            "value": "btrx"
+          },
+          "datasource": "influx",
+          "hide": 0,
+          "includeAll": false,
+          "label": "xchg",
+          "multi": false,
+          "name": "tmpl_xchg",
+          "options": [],
+          "query": "SHOW MEASUREMENTS",
+          "refresh": 1,
+          "regex": "",
+          "sort": 3,
+          "tagValuesQuery": "",
+          "tags": [],
+          "tagsQuery": "",
+          "type": "query",
+          "useTags": false
+        },
+        {
+          "allValue": null,
+          "current": {
+            "text": "5m",
+            "value": "5m"
+          },
+          "datasource": "influx",
+          "hide": 0,
+          "includeAll": false,
+          "label": "tick",
+          "multi": false,
+          "name": "tmpl_tick",
+          "options": [],
+          "query": "SHOW TAG VALUES FROM \"btrx\" WITH KEY = \"tick\"",
+          "refresh": 1,
+          "regex": "",
+          "sort": 3,
+          "tagValuesQuery": "",
+          "tags": [],
+          "tagsQuery": "",
+          "type": "query",
+          "useTags": false
+        },
+        {
+          "allValue": null,
+          "current": {
+            "tags": [],
+            "text": "BTC-XLM",
+            "value": "BTC-XLM"
+          },
+          "datasource": "influx",
+          "hide": 0,
+          "includeAll": false,
+          "label": "pair",
+          "multi": false,
+          "name": "tmpl_pair",
+          "options": [],
+          "query": "SHOW TAG VALUES FROM \"btrx\" WITH KEY = \"pair\"",
+          "refresh": 1,
+          "regex": "",
+          "sort": 1,
+          "tagValuesQuery": "",
+          "tags": [],
+          "tagsQuery": "",
+          "type": "query",
+          "useTags": false
+        },
+        {
+          "allValue": null,
+          "current": {
+            "tags": [],
+            "text": "close",
+            "value": [
+              "close"
+            ]
+          },
+          "datasource": "influx",
+          "hide": 0,
+          "includeAll": false,
+          "label": "values",
+          "multi": true,
+          "name": "tmpl_values",
+          "options": [],
+          "query": "SHOW FIELD KEYS FROM \"btrx\"",
+          "refresh": 1,
+          "regex": "",
+          "sort": 3,
+          "tagValuesQuery": "",
+          "tags": [],
+          "tagsQuery": "",
+          "type": "query",
+          "useTags": false
+        }
+      ]
+    },
+    "time": {
+      "from": "now/d",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": [
+        "5s",
+        "10s",
+        "30s",
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ],
+      "time_options": [
+        "5m",
+        "15m",
+        "1h",
+        "6h",
+        "12h",
+        "24h",
+        "2d",
+        "7d",
+        "30d"
+      ]
+    },
+    "timezone": "utc",
+    "title": "MAiN",
+    "version": 3
+  }
+}
