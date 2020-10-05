@@ -32,7 +32,7 @@ setup(
         'requests==2.18.4',
         'wrapt==1.10.11',
         'PyYAML==3.11',
-        'Django==1.11.6'
+        'Django==1.11.29'
     ],
     author='tbl42',
     author_email='3999809+tbl42@users.noreply.github.com',
