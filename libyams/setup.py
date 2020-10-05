@@ -29,7 +29,7 @@ setup(
     packages=['libyams'],
     install_requires=[
         'python-telegram-bot==7.0.1',
-        'requests==2.18.4',
+        'requests==2.20.0',
         'wrapt==1.10.11',
         'PyYAML==3.11',
         'Django==1.11.29'
