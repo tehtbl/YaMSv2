@@ -31,7 +31,7 @@ setup(
         'python-telegram-bot==7.0.1',
         'requests==2.18.4',
         'wrapt==1.10.11',
-        'PyYAML==3.11',
+        'PyYAML==5.4',
         'Django==1.11.29'
     ],
     author='tbl42',
